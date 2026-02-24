@@ -1,0 +1,342 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USUARIOS Y AUTENTICACIÓN
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String?
+  fullName      String?
+  avatarUrl     String?
+  role          UserRole  @default(USER)
+  pointsBalance Int       @default(0)
+  isActive      Boolean   @default(true)
+  stripeCustomerId String? @unique
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relaciones
+  subscription  Subscription?
+  transactions  Transaction[]
+  sessions      ChatSession[]
+  settings      UserSettings?
+  pointPurchases PointPurchase[]
+
+  @@index([email])
+  @@index([stripeCustomerId])
+  @@map("users")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+// ============================================
+// SUSCRIPCIONES Y PLANES
+// ============================================
+
+model Plan {
+  id              String      @id @default(cuid())
+  name            String
+  slug            String      @unique
+  type            PlanType
+  priceMonthly    Float
+  priceYearly     Float?
+  pointsIncluded  Int
+  features        Json
+  arenaModules    Json?
+  isActive        Boolean     @default(true)
+  isPopular       Boolean     @default(false)
+  sortOrder       Int         @default(0)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Relaciones
+  subscriptions Subscription[]
+
+  @@index([slug])
+  @@map("plans")
+}
+
+enum PlanType {
+  FIXED
+  CUSTOM
+  PAY_AS_YOU_GO
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  userId               String             @unique
+  planId               String
+  stripeSubscriptionId String?            @unique
+  stripeCustomerId     String?
+  status               SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  // Relaciones
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan  @relation(fields: [planId], references: [id])
+
+  @@index([userId])
+  @@index([stripeSubscriptionId])
+  @@map("subscriptions")
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  INCOMPLETE
+  TRIALING
+}
+
+// ============================================
+// TRANSACCIONES Y PUNTOS
+// ============================================
+
+model Transaction {
+  id              String          @id @default(cuid())
+  userId          String
+  type            TransactionType
+  pointsAmount    Int
+  moneyAmount     Float?
+  description     String
+  stripePaymentId String?
+  metadata        Json?
+  createdAt       DateTime        @default(now())
+
+  // Relaciones
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("transactions")
+}
+
+enum TransactionType {
+  SUBSCRIPTION_CREDIT
+  PURCHASE_POINTS
+  USAGE_DEDUCTION
+  REFUND
+  BONUS
+  EXPIRATION
+}
+
+model PointPackage {
+  id          String   @id @default(cuid())
+  name        String
+  points      Int
+  price       Float
+  bonusPoints Int      @default(0)
+  isPopular   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relaciones
+  purchases PointPurchase[]
+
+  @@map("point_packages")
+}
+
+model PointPurchase {
+  id              String   @id @default(cuid())
+  userId          String
+  packageId       String?
+  pointsPurchased Int
+  amountPaid      Float
+  stripePaymentId String?
+  status          String   @default("completed")
+  createdAt       DateTime @default(now())
+
+  // Relaciones
+  user     User          @relation(fields: [userId], references: [id])
+  package  PointPackage? @relation(fields: [packageId], references: [id])
+
+  @@index([userId])
+  @@map("point_purchases")
+}
+
+// ============================================
+// SESIONES DE CHAT Y MENSAJES
+// ============================================
+
+model ChatSession {
+  id               String      @id @default(cuid())
+  userId           String
+  arenaType        ArenaType
+  title            String?
+  modelUsed        String
+  skillMode        String?
+  systemPrompt     String?     @db.Text
+  totalTokensUsed  Int         @default(0)
+  totalPointsSpent Int         @default(0)
+  contextData      Json?
+  isActive         Boolean     @default(true)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  // Relaciones
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@index([userId])
+  @@index([arenaType])
+  @@index([createdAt])
+  @@map("chat_sessions")
+}
+
+enum ArenaType {
+  TEXT
+  CODE
+  IMAGE
+  VIDEO
+  AUDIO
+}
+
+model Message {
+  id           String      @id @default(cuid())
+  sessionId    String
+  role         MessageRole
+  content      String      @db.Text
+  tokensUsed   Int         @default(0)
+  pointsCost   Int         @default(0)
+  modelUsed    String?
+  metadata     Json?
+  createdAt    DateTime    @default(now())
+
+  // Relaciones
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+// ============================================
+// CONFIGURACIÓN DE USUARIO
+// ============================================
+
+model UserSettings {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  dailyPointsLimit   Int      @default(10000)
+  sessionTokensLimit Int      @default(100000)
+  preferredModel     String?
+  preferredArena     String?
+  notificationsEmail Boolean  @default(true)
+  notificationsPush  Boolean  @default(false)
+  arenaPreferences   Json?
+  theme              String   @default("dark")
+  language           String   @default("es")
+  updatedAt          DateTime @updatedAt
+
+  // Relaciones
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_settings")
+}
+
+// ============================================
+// MODELOS DE IA Y PRECIOS
+// ============================================
+
+model AIModel {
+  id              String    @id @default(cuid())
+  name            String
+  slug            String    @unique
+  provider        AIProvider
+  contextWindow   Int
+  inputPrice1K    Float
+  outputPrice1K   Float
+  inputPoints1K   Int
+  outputPoints1K  Int
+  capabilities    Json?
+  isActive        Boolean   @default(true)
+  isAvailable     Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([provider])
+  @@index([slug])
+  @@map("ai_models")
+}
+
+enum AIProvider {
+  OPENAI
+  ANTHROPIC
+  GOOGLE
+  META
+  MISTRAL
+  COHERE
+  CUSTOM
+}
+
+// ============================================
+// SKILLS Y MODOS
+// ============================================
+
+model Skill {
+  id           String    @id @default(cuid())
+  name         String
+  slug         String    @unique
+  arenaType    ArenaType
+  description  String?
+  systemPrompt String    @db.Text
+  icon         String?
+  isActive     Boolean   @default(true)
+  sortOrder    Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([arenaType])
+  @@index([slug])
+  @@map("skills")
+}
+
+// ============================================
+// AUDIT LOG
+// ============================================
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
