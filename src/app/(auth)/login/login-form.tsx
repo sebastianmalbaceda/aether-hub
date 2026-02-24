@@ -15,7 +15,7 @@ export default function LoginForm() {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirect = searchParams.get('redirect') || '/'
+  const redirect = searchParams.get('redirect') || '/arena-texto'
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -30,14 +30,17 @@ export default function LoginForm() {
       })
 
       if (error) {
-        setError(error.message === 'Invalid login credentials' 
-          ? 'Credenciales inválidas. Verifica tu email y contraseña.' 
+        setError(error.message === 'Invalid login credentials'
+          ? 'Credenciales inválidas. Verifica tu email y contraseña.'
           : error.message)
+        setLoading(false)
         return
       }
 
-      router.push(redirect)
+      // Primero refrescamos para que el servidor reconozca la sesión
+      // y luego navegamos al dashboard
       router.refresh()
+      router.push(redirect)
     } catch (err) {
       setError('Error al iniciar sesión. Intenta de nuevo.')
     } finally {

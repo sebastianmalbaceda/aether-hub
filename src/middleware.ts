@@ -65,7 +65,7 @@ export async function middleware(request: NextRequest) {
 
   if (isAuthPath && user) {
     const url = request.nextUrl.clone()
-    url.pathname = '/'
+    url.pathname = '/arena-texto'
     return NextResponse.redirect(url)
   }
 

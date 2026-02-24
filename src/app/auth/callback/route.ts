@@ -10,7 +10,7 @@ interface CookieItem {
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
-  const redirect = searchParams.get('redirect') || '/'
+  const redirect = searchParams.get('redirect') || '/arena-texto'
   const error = searchParams.get('error')
 
   if (error) {
