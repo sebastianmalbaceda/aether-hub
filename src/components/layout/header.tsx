@@ -1,10 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
 import {
   Bell,
-  Plus,
   Zap,
   ChevronDown,
   LogOut,
@@ -12,7 +10,8 @@ import {
   User,
   CreditCard,
   Menu,
-  PanelRight
+  PanelRight,
+  Sparkles
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -29,7 +28,6 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { useChatStore } from '@/stores/chat-store'
 import { useUserStore } from '@/stores/user-store'
 
 interface HeaderProps {
@@ -38,26 +36,10 @@ interface HeaderProps {
 }
 
 export function Header({ onMenuClick, onPanelClick }: HeaderProps) {
-  const pathname = usePathname()
-  
-  // Chat store
-  const startNewSession = useChatStore((state) => state.startNewSession)
-  
   // User store
   const pointsBalance = useUserStore((state) => state.pointsBalance)
   const user = useUserStore((state) => state.user)
   
-  // Generate breadcrumb from pathname
-  const pathSegments = pathname.split('/').filter(Boolean)
-  const breadcrumbs = pathSegments.map((segment, index) => {
-    const href = '/' + pathSegments.slice(0, index + 1).join('/')
-    const name = segment
-      .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ')
-    return { name, href }
-  })
-
   // Format points with K suffix
   const formatPoints = (points: number) => {
     if (points >= 1000) {
@@ -80,68 +62,47 @@ export function Header({ onMenuClick, onPanelClick }: HeaderProps) {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 backdrop-blur-md px-4 md:px-6">
-      {/* Left side - Menu button and Breadcrumb */}
-      <div className="flex items-center gap-2 md:gap-4">
-        {/* Mobile menu button */}
+    <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-background/80 backdrop-blur-md px-4 lg:px-6 transition-all duration-300">
+      {/* FASE 1: Estructura limpia sin Logo redundante */}
+      
+      {/* ═══════════════════════════════════════════════════════════════
+          IZQUIERDA: Solo botón hamburguesa (móvil)
+      ═══════════════════════════════════════════════════════════════ */}
+      <div className="flex items-center">
+        {/* Mobile menu button - Solo visible en móvil */}
         <Button
           variant="ghost"
           size="icon"
           onClick={onMenuClick}
-          className="lg:hidden"
+          className="lg:hidden transition-all duration-200 hover:shadow-[0_0_12px_rgba(139,92,246,0.2)]"
         >
           <Menu className="h-5 w-5" />
         </Button>
-
-        {/* Breadcrumb - Hidden on mobile */}
-        <nav className="hidden md:flex items-center text-sm text-muted-foreground">
-          <Link href="/dashboard" className="hover:text-foreground transition-colors">
-            Dashboard
-          </Link>
-          {breadcrumbs.slice(1).map((crumb, index) => (
-            <span key={crumb.href} className="flex items-center">
-              <span className="mx-2">/</span>
-              <Link 
-                href={crumb.href}
-                className="hover:text-foreground transition-colors"
-              >
-                {crumb.name}
-              </Link>
-            </span>
-          ))}
-        </nav>
-
-        {/* Mobile page title */}
-        <span className="md:hidden text-sm font-medium">
-          {breadcrumbs.length > 1 ? breadcrumbs[breadcrumbs.length - 1].name : 'Dashboard'}
-        </span>
       </div>
 
-      {/* Right side - Actions */}
-      <div className="flex items-center gap-2 md:gap-3">
-        {/* Quick Actions */}
+      {/* ═══════════════════════════════════════════════════════════════
+          CENTRO: CTA "Mejora tu plan" (flex-1 para centrar)
+      ═══════════════════════════════════════════════════════════════ */}
+      <div className="flex-1 flex justify-center">
         <Button 
           variant="outline" 
           size="sm" 
-          className="gap-2 hidden sm:inline-flex"
-          onClick={startNewSession}
+          asChild
+          className="hidden sm:inline-flex border-primary-500/50 hover:bg-primary-500/10 hover:shadow-[0_0_15px_rgba(139,92,246,0.3)] transition-all duration-200 gap-2"
         >
-          <Plus className="h-4 w-4" />
-          <span className="hidden md:inline">Nuevo Chat</span>
+          <Link href="/pricing">
+            <Sparkles className="h-4 w-4" />
+            <span>Mejora tu plan</span>
+          </Link>
         </Button>
+      </div>
 
-        {/* Mobile new chat button */}
-        <Button 
-          variant="outline" 
-          size="icon"
-          className="sm:hidden"
-          onClick={startNewSession}
-        >
-          <Plus className="h-4 w-4" />
-        </Button>
-
+      {/* ═══════════════════════════════════════════════════════════════
+          DERECHA: Puntos + Notificaciones + Avatar (justify-end garantiza alineación)
+      ═══════════════════════════════════════════════════════════════ */}
+      <div className="flex items-center gap-2 md:gap-4 justify-end">
         {/* Points indicator */}
-        <div className="hidden md:flex items-center gap-2 rounded-lg bg-primary-700/10 px-3 py-1.5">
+        <div className="flex items-center gap-2 rounded-lg bg-primary-700/10 px-3 py-1.5 transition-all duration-200 hover:shadow-[0_0_12px_rgba(139,92,246,0.2)]">
           <Zap className="h-4 w-4 text-primary-500" />
           <span className="text-sm font-medium">{formatPoints(pointsBalance)} pts</span>
         </div>
@@ -151,7 +112,7 @@ export function Header({ onMenuClick, onPanelClick }: HeaderProps) {
           variant="ghost"
           size="icon"
           onClick={onPanelClick}
-          className="lg:hidden"
+          className="xl:hidden transition-all duration-200 hover:shadow-[0_0_12px_rgba(139,92,246,0.2)]"
         >
           <PanelRight className="h-5 w-5" />
         </Button>
@@ -159,7 +120,7 @@ export function Header({ onMenuClick, onPanelClick }: HeaderProps) {
         {/* Notifications */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative">
+            <Button variant="ghost" size="icon" className="relative transition-all duration-200 hover:shadow-[0_0_12px_rgba(139,92,246,0.2)]">
               <Bell className="h-5 w-5" />
               <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary-600 text-[10px] font-bold text-white flex items-center justify-center">
                 0
@@ -180,9 +141,8 @@ export function Header({ onMenuClick, onPanelClick }: HeaderProps) {
         {/* User Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex items-center gap-2 px-2">
+            <Button variant="ghost" className="flex items-center gap-2 px-2 transition-all duration-200 hover:shadow-[0_0_12px_rgba(139,92,246,0.2)]">
               <Avatar className="h-8 w-8">
-                {/* Fixed: Use user avatar URL or empty string to trigger fallback */}
                 <AvatarImage 
                   src={user?.avatarUrl || ''} 
                   alt={user?.fullName || 'Usuario'} 

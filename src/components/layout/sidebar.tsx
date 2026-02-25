@@ -18,7 +18,7 @@ import {
   ChevronRight
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useUserStore, selectUsagePercentage } from '@/stores/user-store'
+// FASE 2: useUserStore y selectUsagePercentage eliminados - puntos ahora solo en Header
 
 // 1. Rutas actualizadas basadas en el nuevo Sidebar
 const navigation = [
@@ -55,17 +55,7 @@ export function Sidebar({
   const collapsed = externalCollapsed !== undefined ? externalCollapsed : internalCollapsed
   const setCollapsed = onCollapsedChange || setInternalCollapsed
 
-  // Integración de Zustand (Store)
-  const pointsBalance = useUserStore((state) => state.pointsBalance)
-  const usagePercentage = useUserStore(selectUsagePercentage)
-
-  // Función formateadora original del nuevo
-  const formatPoints = (points: number) => {
-    if (points >= 1000) {
-      return `${(points / 1000).toFixed(1).replace(/\.0$/, '')}K`
-    }
-    return points.toString()
-  }
+  // FASE 2: Variables de puntos eliminadas - ahora solo en Header
 
   // Lógica mejorada para detectar la ruta activa
   const isNavItemActive = (href: string) => {
@@ -79,32 +69,31 @@ export function Sidebar({
   return (
     <aside
       className={cn(
-        // Clases y estructura visual del antiguo conservadas.
-        // Solo se añade flex-col para manejar bien el layout interno.
-        'fixed left-0 top-0 z-40 h-screen border-r border-border bg-background-secondary transition-all duration-300 flex flex-col',
+        // FASE 2: Sidebar relativo para Holy Grail Layout (no fixed)
+        'h-full border-r border-border bg-background-secondary transition-[width] duration-300 ease-in-out flex flex-col',
         collapsed && !isMobile ? 'w-16' : 'w-64',
         // Ajuste mínimo para que no se rompa si está dentro de un componente Sheet en móvil
         isMobile && 'w-full relative z-0 border-none'
       )}
     >
-      {/* Logo */}
+      {/* Logo - FASE 4: Hover neón en logo */}
       <div className="flex h-16 items-center justify-between border-b border-border px-4 flex-shrink-0">
         {(!collapsed || isMobile) && (
-          <Link href="/" className="flex items-center gap-2" onClick={onClose}>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-700">
+          <Link href="/" className="flex items-center gap-2 group" onClick={onClose}>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-700 transition-all duration-200 group-hover:shadow-[0_0_15px_rgba(139,92,246,0.4)]">
               <Zap className="h-5 w-5 text-white" />
             </div>
             <span className="text-xl font-bold gradient-text">Aether</span>
           </Link>
         )}
         
-        {/* Ocultamos el botón de colapsar en vista móvil */}
+        {/* Ocultamos el botón de colapsar en vista móvil - FASE 4: Hover neón */}
         {!isMobile && (
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setCollapsed(!collapsed)}
-            className="ml-auto"
+            className="ml-auto transition-all duration-200 hover:shadow-[0_0_12px_rgba(139,92,246,0.2)]"
           >
             {collapsed ? (
               <ChevronRight className="h-4 w-4" />
@@ -115,7 +104,7 @@ export function Sidebar({
         )}
       </div>
 
-      {/* Navigation */}
+      {/* Navigation - FASE 4: Efectos hover neón en items activos */}
       <nav className="flex-1 space-y-1 p-2 overflow-y-auto">
         {navigation.map((item) => {
           const isActive = isNavItemActive(item.href)
@@ -126,10 +115,10 @@ export function Sidebar({
               href={item.href}
               onClick={onClose} // Cierra el menú en mobile al hacer clic
               className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all',
+                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200',
                 isActive
-                  ? 'bg-primary-700/20 text-primary-400'
-                  : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
+                  ? 'bg-primary-700/20 text-primary-400 shadow-[0_0_12px_rgba(139,92,246,0.2)]'
+                  : 'text-muted-foreground hover:bg-secondary hover:text-foreground hover:shadow-[0_0_8px_rgba(139,92,246,0.1)]',
                 collapsed && !isMobile && 'justify-center'
               )}
               title={collapsed && !isMobile ? item.name : undefined}
@@ -141,30 +130,7 @@ export function Sidebar({
         })}
       </nav>
 
-      {/* Points Balance - Funcional con store pero con diseño antiguo */}
-      {(!collapsed || isMobile) && (
-        <div className="border-t border-border p-4 flex-shrink-0">
-          <div className="rounded-lg bg-background-tertiary p-3">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Zap className="h-4 w-4 text-primary-500" />
-              <span>Puntos</span>
-            </div>
-            <div className="mt-1 text-2xl font-bold text-foreground">
-              {formatPoints(pointsBalance)}
-            </div>
-            {/* Se mantiene tu HTML de barra de progreso antiguo, enlazando el % dinámicamente al style */}
-            <div className="mt-2 h-1.5 w-full rounded-full bg-secondary">
-              <div 
-                className="h-1.5 rounded-full bg-primary-600 transition-all duration-500" 
-                style={{ width: `${Math.min(usagePercentage, 100)}%` }}
-              />
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {usagePercentage.toFixed(0)}% usado hoy
-            </p>
-          </div>
-        </div>
-      )}
+      {/* FASE 2: Redundancia eliminada - El saldo de puntos ahora solo vive en el Header */}
     </aside>
   )
 }

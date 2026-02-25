@@ -5,7 +5,9 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ChatInterface } from '@/components/chat/chat-interface'
 import { ContextBar } from '@/components/telemetry/context-bar'
-import { Plus, Trash2, Bot, Zap, Book, Pen, Megaphone, GraduationCap, Code, GitPullRequest, Bug as BugIcon, BarChart, Search, Lightbulb, Layout, School, Languages } from 'lucide-react'
+import { TelemetryPanel } from '@/components/telemetry/telemetry-panel'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
+import { Plus, Trash2, Bot, Zap, Book, Pen, Megaphone, GraduationCap, Code, GitPullRequest, Bug as BugIcon, BarChart, Search, Lightbulb, Layout, School, Languages, PanelRight } from 'lucide-react'
 import { useChatStore, selectFormattedContextUsage, selectContextStatus } from '@/stores/chat-store'
 import { useUserStore } from '@/stores/user-store'
 import { estimateTokens, AI_MODELS, SKILLS, getCategoryLabel } from '@/config'
@@ -82,6 +84,7 @@ export default function ArenaTextoPage() {
   const deductPoints = useUserStore((state) => state.deductPoints)
   
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [panelOpen, setPanelOpen] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)
 
   // Group skills by category
@@ -255,113 +258,153 @@ export default function ArenaTextoPage() {
   }, [startNewSession])
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex flex-col">
-      {/* Model and Skill Selectors - Moved from Header */}
-      <div className="flex flex-wrap justify-center gap-4 mb-4">
-        {/* Model Selector */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Modelo:</span>
-          <Select value={selectedModelId} onValueChange={setSelectedModelId}>
-            <SelectTrigger className="w-[180px] h-9">
-              <SelectValue placeholder="Seleccionar modelo" />
-            </SelectTrigger>
-            <SelectContent>
-              {AI_MODELS.filter(m => m.isAvailable).map((model) => (
-                <SelectItem key={model.id} value={model.id}>
-                  <div className="flex flex-col">
-                    <span>{model.name}</span>
-                    <span className="text-xs text-muted-foreground">{model.providerDisplayName}</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+    /* FASE 3: Layout con telemetría integrada dentro de la página */
+    <div className="flex h-full w-full">
+      {/* CENTRO: Área del Chat */}
+      <div className="flex-1 flex flex-col overflow-y-auto min-w-0 p-4 md:p-6 animate-in fade-in duration-500">
+        {/* FASE 2: Botón "Nuevo Chat" movido desde Header global + Selectores responsivos */}
+        <div className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-3 mb-4">
+          {/* New Chat Button - FASE 2: Ubicado estratégicamente cerca de selectores */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleNewChat}
+            className="gap-2 border-primary-500/50 hover:bg-primary-500/10 hover:shadow-[0_0_15px_rgba(139,92,246,0.3)] transition-all duration-200"
+          >
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Nuevo Chat</span>
+          </Button>
+          {/* Model Selector - FASE 3: z-index adecuado para dropdowns */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Modelo:</span>
+            <Select value={selectedModelId} onValueChange={setSelectedModelId}>
+              <SelectTrigger className="w-[180px] h-9 transition-all duration-200 hover:shadow-[0_0_12px_rgba(139,92,246,0.2)]">
+                <SelectValue placeholder="Seleccionar modelo" />
+              </SelectTrigger>
+              <SelectContent className="z-50">
+                {AI_MODELS.filter(m => m.isAvailable).map((model) => (
+                  <SelectItem key={model.id} value={model.id}>
+                    <div className="flex flex-col">
+                      <span>{model.name}</span>
+                      <span className="text-xs text-muted-foreground">{model.providerDisplayName}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        {/* Skill Selector */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Asistente:</span>
-          <Select value={selectedSkillId} onValueChange={setSelectedSkillId}>
-            <SelectTrigger className="w-[200px] h-9">
-              <SelectValue placeholder="Seleccionar asistente" />
-            </SelectTrigger>
-            <SelectContent className="max-h-[400px]">
-              {Object.entries(skillsByCategory).map(([category, skills]) => (
-                <div key={category}>
-                  <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                    {getCategoryLabel(category as SkillConfig['category'])}
-                  </div>
-                  {skills.map((skill) => {
-                    const IconComponent = skillIcons[skill.icon] || Bot
-                    return (
-                      <SelectItem key={skill.id} value={skill.id}>
-                        <div className="flex items-center gap-2">
-                          <IconComponent className="h-4 w-4" />
-                          <div className="flex flex-col">
-                            <span>{skill.name}</span>
-                            <span className="text-xs text-muted-foreground line-clamp-1">
-                              {skill.description}
-                            </span>
+          {/* Skill Selector - FASE 3: z-index adecuado para dropdowns */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Asistente:</span>
+            <Select value={selectedSkillId} onValueChange={setSelectedSkillId}>
+              <SelectTrigger className="w-[200px] h-9 transition-all duration-200 hover:shadow-[0_0_12px_rgba(139,92,246,0.2)]">
+                <SelectValue placeholder="Seleccionar asistente" />
+              </SelectTrigger>
+              <SelectContent className="max-h-[400px] z-50">
+                {Object.entries(skillsByCategory).map(([category, skills]) => (
+                  <div key={category}>
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                      {getCategoryLabel(category as SkillConfig['category'])}
+                    </div>
+                    {skills.map((skill) => {
+                      const IconComponent = skillIcons[skill.icon] || Bot
+                      return (
+                        <SelectItem key={skill.id} value={skill.id}>
+                          <div className="flex items-center gap-2">
+                            <IconComponent className="h-4 w-4" />
+                            <div className="flex flex-col">
+                              <span>{skill.name}</span>
+                              <span className="text-xs text-muted-foreground line-clamp-1">
+                                {skill.description}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      </SelectItem>
-                    )
-                  })}
-                </div>
-              ))}
-            </SelectContent>
-          </Select>
+                        </SelectItem>
+                      )
+                    })}
+                  </div>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Mobile panel toggle button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setPanelOpen(true)}
+            className="xl:hidden transition-all duration-200 hover:shadow-[0_0_12px_rgba(139,92,246,0.2)]"
+          >
+            <PanelRight className="h-5 w-5" />
+          </Button>
         </div>
+
+        {/* Context Bar */}
+        <div className="mb-4">
+          <ContextBar
+            used={telemetry.contextUsed}
+            limit={telemetry.contextLimit}
+            status={contextStatus}
+          />
+        </div>
+        
+        {/* Chat Interface */}
+        <Card className="flex-1 overflow-hidden">
+          <ChatInterface
+            messages={messages}
+            isLoading={isStreaming || isSending}
+            onSendMessage={handleSendMessage}
+            onRegenerate={handleRegenerate}
+            onDeleteChat={() => setShowDeleteDialog(true)}
+          />
+        </Card>
+        
+        {/* Error Display */}
+        {error && (
+          <div className="mt-4 p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive">
+            <p className="text-sm font-medium">Error: {error}</p>
+          </div>
+        )}
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Eliminar conversación?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta acción eliminará todos los mensajes de la conversación actual.
+                No se puede deshacer.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteChat}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Eliminar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
-      {/* Context Bar */}
-      <div className="mb-4">
-        <ContextBar
-          used={telemetry.contextUsed}
-          limit={telemetry.contextLimit}
-          status={contextStatus}
-        />
+      {/* DERECHA: Panel de Telemetría (Desktop) - FASE 3: Integrado en la página */}
+      <div className="hidden xl:flex w-80 shrink-0 border-l border-border bg-background-secondary/30 overflow-y-auto">
+        <TelemetryPanel />
       </div>
-      
-      {/* Chat Interface */}
-      <Card className="flex-1 overflow-hidden">
-        <ChatInterface
-          messages={messages}
-          isLoading={isStreaming || isSending}
-          onSendMessage={handleSendMessage}
-          onRegenerate={handleRegenerate}
-          onDeleteChat={() => setShowDeleteDialog(true)}
-        />
-      </Card>
-      
-      {/* Error Display */}
-      {error && (
-        <div className="mt-4 p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive">
-          <p className="text-sm font-medium">Error: {error}</p>
-        </div>
-      )}
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar conversación?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción eliminará todos los mensajes de la conversación actual. 
-              No se puede deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDeleteChat}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Mobile Right Panel (Sheet) - FASE 3: Telemetría en móvil */}
+      <Sheet open={panelOpen} onOpenChange={setPanelOpen}>
+        <SheetContent side="right" className="w-80 p-0 max-w-[85vw]">
+          <SheetHeader className="sr-only">
+            <SheetTitle>Panel de telemetría</SheetTitle>
+            <SheetDescription>Información de uso y estadísticas de la sesión actual</SheetDescription>
+          </SheetHeader>
+          <TelemetryPanel />
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }
