@@ -17,9 +17,9 @@ import {
 const arenas = [
   {
     name: 'Arena de Texto',
-    description: 'Chatea con los mejores modelos de lenguaje: GPT-4, Claude, Gemini',
+    description: 'Chatea con los mejores modelos de lenguaje: GPT-4, Claude, Gemini, Llama',
     icon: MessageSquare,
-    href: '/arena-texto',
+    href: '/dashboard/arena-texto',
     color: 'text-blue-400',
     bgColor: 'bg-blue-400/10',
   },
@@ -27,7 +27,7 @@ const arenas = [
     name: 'Arena de Código',
     description: 'Asistencia de programación con modelos especializados',
     icon: Code,
-    href: '/arena-codigo',
+    href: '/dashboard/arena-codigo',
     color: 'text-green-400',
     bgColor: 'bg-green-400/10',
   },
@@ -35,7 +35,7 @@ const arenas = [
     name: 'Generación de Imágenes',
     description: 'Crea imágenes únicas con DALL-E, Stable Diffusion y más',
     icon: Image,
-    href: '/arena/imagenes',
+    href: '/dashboard/arena/imagenes',
     color: 'text-pink-400',
     bgColor: 'bg-pink-400/10',
   },
@@ -43,7 +43,7 @@ const arenas = [
     name: 'Generación de Video',
     description: 'Produce videos a partir de texto o imágenes',
     icon: Video,
-    href: '/arena/video',
+    href: '/dashboard/arena/video',
     color: 'text-purple-400',
     bgColor: 'bg-purple-400/10',
   },
@@ -51,7 +51,7 @@ const arenas = [
     name: 'Generación de Audio',
     description: 'Convierte texto a voz y crea música con IA',
     icon: Music,
-    href: '/arena/audio',
+    href: '/dashboard/arena/audio',
     color: 'text-orange-400',
     bgColor: 'bg-orange-400/10',
   },
@@ -65,17 +65,17 @@ const recentSessions = [
 
 export default function DashboardPage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-4 md:p-6">
       {/* Welcome Section */}
       <div>
-        <h1 className="text-3xl font-bold">Bienvenido a Aether Hub</h1>
+        <h1 className="text-2xl md:text-3xl font-bold">Bienvenido a Aether Hub</h1>
         <p className="text-muted-foreground mt-1">
           Tu portal unificado para acceder a múltiples modelos de IA
         </p>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Puntos Disponibles</CardTitle>
@@ -98,20 +98,20 @@ export default function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">2,450 pts</div>
             <p className="text-xs text-muted-foreground">
-              +15% vs ayer
+              +15% respecto a ayer
             </p>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Sesiones Activas</CardTitle>
+            <CardTitle className="text-sm font-medium">Sesiones Hoy</CardTitle>
             <Clock className="h-4 w-4 text-blue-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">12</div>
             <p className="text-xs text-muted-foreground">
-              3 sesiones esta semana
+              3 activas ahora
             </p>
           </CardContent>
         </Card>
@@ -132,16 +132,11 @@ export default function DashboardPage() {
 
       {/* Arenas Grid */}
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">Arenas de IA</h2>
-          <Button variant="ghost" size="sm">
-            Ver todas <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <h2 className="text-xl font-semibold mb-4">Arenas de IA</h2>
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {arenas.map((arena) => (
             <Link key={arena.name} href={arena.href}>
-              <Card className="h-full hover:border-primary-700/50 transition-colors cursor-pointer group">
+              <Card className="h-full transition-all hover:border-primary-500/50 hover:shadow-lg hover:shadow-primary-500/5 cursor-pointer group">
                 <CardHeader>
                   <div className={`inline-flex w-12 h-12 items-center justify-center rounded-lg ${arena.bgColor} ${arena.color} mb-2`}>
                     <arena.icon className="h-6 w-6" />
@@ -161,9 +156,9 @@ export default function DashboardPage() {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">Sesiones Recientes</h2>
-          <Link href="/dashboard/history">
-            <Button variant="ghost" size="sm">
-              Ver historial <ArrowRight className="ml-2 h-4 w-4" />
+          <Link href="/dashboard/historial">
+            <Button variant="ghost" size="sm" className="text-primary-400 hover:text-primary-300">
+              Ver todas <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>
         </div>
@@ -172,17 +167,12 @@ export default function DashboardPage() {
             <div className="divide-y divide-border">
               {recentSessions.map((session) => (
                 <div key={session.id} className="flex items-center justify-between p-4 hover:bg-secondary/50 transition-colors cursor-pointer">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-primary-700/10 flex items-center justify-center">
-                      <MessageSquare className="h-5 w-5 text-primary-400" />
-                    </div>
-                    <div>
-                      <p className="font-medium">{session.title}</p>
-                      <p className="text-sm text-muted-foreground">{session.model}</p>
-                    </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{session.title}</p>
+                    <p className="text-sm text-muted-foreground">{session.model}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">{session.tokens.toLocaleString()} tokens</p>
+                  <div className="text-right ml-4">
+                    <p className="text-sm text-muted-foreground">{session.tokens.toLocaleString()} tokens</p>
                     <p className="text-xs text-muted-foreground">{session.date}</p>
                   </div>
                 </div>

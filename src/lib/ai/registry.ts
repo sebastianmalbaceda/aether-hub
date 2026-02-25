@@ -91,6 +91,7 @@ class AIProviderRegistry {
       google: false,
       meta: false,
       mistral: false,
+      groq: false,
     }
 
     for (const [provider, instance] of this.providers) {

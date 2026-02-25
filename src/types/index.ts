@@ -139,13 +139,14 @@ export interface MessageMetadata {
 // AI Models
 // ============================================
 
-export type AIProvider = 
+export type AIProvider =
   | 'OPENAI'
   | 'ANTHROPIC'
   | 'GOOGLE'
   | 'META'
   | 'MISTRAL'
   | 'COHERE'
+  | 'GROQ'
   | 'CUSTOM';
 
 export interface AIModel {

@@ -43,8 +43,16 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Protected routes
-  const protectedPaths = ['/arena-texto', '/arena-codigo', '/arena-imagen', '/pricing', '/settings']
+  // Protected routes - all dashboard and arena routes
+  const protectedPaths = [
+    '/dashboard',
+    '/arena-texto',
+    '/arena-codigo',
+    '/arena',
+    '/historial',
+    '/configuracion',
+    '/pricing',
+  ]
   const isProtectedPath = protectedPaths.some((path) =>
     request.nextUrl.pathname.startsWith(path)
   )
@@ -65,7 +73,14 @@ export async function middleware(request: NextRequest) {
 
   if (isAuthPath && user) {
     const url = request.nextUrl.clone()
-    url.pathname = '/arena-texto'
+    url.pathname = '/dashboard'
+    return NextResponse.redirect(url)
+  }
+
+  // Root path - redirect to dashboard if logged in
+  if (request.nextUrl.pathname === '/' && user) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/dashboard'
     return NextResponse.redirect(url)
   }
 

@@ -1,6 +1,6 @@
 // AI Provider Types and Interfaces
 
-export type AIProvider = 'openai' | 'anthropic' | 'google' | 'meta' | 'mistral'
+export type AIProvider = 'openai' | 'anthropic' | 'google' | 'meta' | 'mistral' | 'groq'
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant'
@@ -34,7 +34,7 @@ export interface ChatCompletionResponse {
 export interface StreamingChunk {
   id: string
   delta: string
-  finishReason?: 'stop' | 'length' | 'content_filter' | null
+  finishReason?: 'stop' | 'length' | 'content_filter' | 'error' | null
 }
 
 export interface ModelConfig {

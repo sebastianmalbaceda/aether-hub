@@ -1,8 +1,25 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { ChatInterface } from '@/components/chat/chat-interface'
+import { ContextBar } from '@/components/telemetry/context-bar'
+import { Plus, Trash2, Bot, Zap, Book, Pen, Megaphone, GraduationCap, Code, GitPullRequest, Bug as BugIcon, BarChart, Search, Lightbulb, Layout, School, Languages } from 'lucide-react'
+import { useChatStore, selectFormattedContextUsage, selectContextStatus } from '@/stores/chat-store'
+import { useUserStore } from '@/stores/user-store'
+import { estimateTokens, AI_MODELS, SKILLS, getCategoryLabel } from '@/config'
+import type { SkillConfig } from '@/config'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import {
   Select,
   SelectContent,
@@ -10,215 +27,341 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { ChatInterface } from '@/components/chat/chat-interface'
-import { ContextBar } from '@/components/telemetry/context-bar'
-import { TelemetryPanel } from '@/components/telemetry/telemetry-panel'
-import { Plus, Sparkles, Trash2 } from 'lucide-react'
-import type { Message, SessionTelemetry, ContextStatus } from '@/types'
 
-const models = [
-  { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', contextLimit: 128000 },
-  { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'OpenAI', contextLimit: 128000 },
-  { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', contextLimit: 200000 },
-  { id: 'claude-3-haiku', name: 'Claude 3 Haiku', provider: 'Anthropic', contextLimit: 200000 },
-  { id: 'gemini-1-5-pro', name: 'Gemini 1.5 Pro', provider: 'Google', contextLimit: 1000000 },
-]
-
-const skills = [
-  { id: 'assistant', name: 'Asistente Estándar', description: 'Para tareas generales' },
-  { id: 'creative', name: 'Poeta/Creativo', description: 'Escritura creativa' },
-  { id: 'academic', name: 'Redactor Académico', description: 'Escritura formal' },
-  { id: 'seo', name: 'Experto SEO', description: 'Contenido optimizado' },
-  { id: 'summarizer', name: 'Resumidor Ejecutivo', description: 'Resúmenes concisos' },
-]
-
-// Mock data for demo
-const mockMessages: Message[] = [
-  {
-    id: '1',
-    sessionId: 'demo',
-    role: 'USER',
-    content: '¡Hola! ¿Puedes explicarme qué es la inteligencia artificial de forma simple?',
-    tokensUsed: 15,
-    pointsCost: 0,
-    createdAt: new Date(),
-  },
-  {
-    id: '2',
-    sessionId: 'demo',
-    role: 'ASSISTANT',
-    content: `¡Hola! Con gusto te explico.
-
-La inteligencia artificial (IA) es como un "cerebro digital" que puede aprender y tomar decisiones, similar a como lo hacemos los humanos.
-
-Imagina que le enseñas a una computadora a reconocer fotos de gatos:
-1. Le muestras miles de fotos de gatos
-2. La computadora encuentra patrones (orejas puntiagudas, bigotes, etc.)
-3. Con práctica, aprende a identificar gatos en fotos nuevas
-
-**Tipos principales:**
-- **IA Estrecha**: Hace una tarea específica (como el reconocimiento de voz de tu teléfono)
-- **IA General**: Puede hacer cualquier tarea intelectual (todavía en desarrollo)
-
-**Ejemplos cotidianos:**
-- Los filtros de fotos que usas
-- Las recomendaciones de Netflix
-- Los asistentes como Siri o Alexa
-
-¿Te gustaría que profundice en algún aspecto específico?`,
-    tokensUsed: 245,
-    pointsCost: 3.5,
-    modelUsed: 'claude-3-5-sonnet',
-    createdAt: new Date(),
-  },
-]
-
-const mockTelemetry: SessionTelemetry = {
-  contextUsed: 45230,
-  contextLimit: 200000,
-  contextPercentage: 22.6,
-  lastRequestCost: 3.5,
-  lastRequestTokens: 260,
-  totalSessionCost: 45.75,
-  totalSessionTokens: 3450,
-  currentModel: 'Claude 3.5 Sonnet',
-  currentSkill: 'Asistente Estándar',
-  contextStatus: 'normal',
+// Map skill icons
+const skillIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+  Bot,
+  Zap,
+  BookOpen: Book,
+  Pen,
+  Megaphone,
+  GraduationCap,
+  Code,
+  GitPullRequest,
+  Bug: BugIcon,
+  BarChart,
+  Search,
+  Lightbulb,
+  Book,
+  Layout,
+  School,
+  Languages,
 }
 
 export default function ArenaTextoPage() {
-  const [selectedModel, setSelectedModel] = useState('claude-3-5-sonnet')
-  const [selectedSkill, setSelectedSkill] = useState('assistant')
-  const [messages, setMessages] = useState<Message[]>(mockMessages)
-  const [isLoading, setIsLoading] = useState(false)
+  // Chat store
+  const messages = useChatStore((state) => state.messages)
+  const selectedModelId = useChatStore((state) => state.selectedModelId)
+  const selectedSkillId = useChatStore((state) => state.selectedSkillId)
+  const telemetry = useChatStore((state) => state.telemetry)
+  const isStreaming = useChatStore((state) => state.isStreaming)
+  const isSending = useChatStore((state) => state.isSending)
+  const error = useChatStore((state) => state.error)
+  
+  const setSelectedModelId = useChatStore((state) => state.setSelectedModelId)
+  const setSelectedSkillId = useChatStore((state) => state.setSelectedSkillId)
+  const addMessage = useChatStore((state) => state.addMessage)
+  const updateLastMessage = useChatStore((state) => state.updateLastMessage)
+  const setStreaming = useChatStore((state) => state.setStreaming)
+  const setSending = useChatStore((state) => state.setSending)
+  const setError = useChatStore((state) => state.setError)
+  const updateTelemetryAfterResponse = useChatStore((state) => state.updateTelemetryAfterResponse)
+  const clearSession = useChatStore((state) => state.clearSession)
+  const startNewSession = useChatStore((state) => state.startNewSession)
+  const getSelectedModel = useChatStore((state) => state.getSelectedModel)
+  const getSelectedSkill = useChatStore((state) => state.getSelectedSkill)
+  
+  // Derived values
+  const formattedContextUsage = useChatStore(selectFormattedContextUsage)
+  const contextStatus = useChatStore(selectContextStatus)
+  
+  // User store
+  const pointsBalance = useUserStore((state) => state.pointsBalance)
+  const dailyUsage = useUserStore((state) => state.dailyUsage)
+  const dailyLimit = useUserStore((state) => state.dailyLimit)
+  const deductPoints = useUserStore((state) => state.deductPoints)
+  
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
-  const currentModel = models.find(m => m.id === selectedModel)
-  const currentSkill = skills.find(s => s.id === selectedSkill)
+  // Group skills by category
+  const skillsByCategory = SKILLS.reduce((acc, skill) => {
+    const category = skill.category
+    if (!acc[category]) acc[category] = []
+    acc[category].push(skill)
+    return acc
+  }, {} as Record<string, SkillConfig[]>)
 
-  const handleSendMessage = async (content: string) => {
-    // Add user message
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      sessionId: 'demo',
-      role: 'USER',
-      content,
-      tokensUsed: Math.ceil(content.length / 4),
+  // Send message to API
+  const handleSendMessage = useCallback(async (content: string) => {
+    if (!content.trim() || isStreaming || isSending) return
+    
+    // Clear previous errors
+    setError(null)
+    
+    // Create user message
+    const userMessage = {
+      id: `user-${Date.now()}`,
+      sessionId: 'current',
+      role: 'USER' as const,
+      content: content.trim(),
+      tokensUsed: estimateTokens(content),
       pointsCost: 0,
       createdAt: new Date(),
     }
-    setMessages(prev => [...prev, userMessage])
-    setIsLoading(true)
-
-    // Simulate AI response
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        sessionId: 'demo',
-        role: 'ASSISTANT',
-        content: 'Esta es una respuesta de demostración. En producción, aquí se conectaría con la API del modelo seleccionado.',
-        tokensUsed: 150,
-        pointsCost: 2.25,
-        modelUsed: selectedModel,
-        createdAt: new Date(),
+    
+    // Add user message to store
+    addMessage(userMessage)
+    setSending(true)
+    
+    // Create placeholder for assistant message
+    const assistantMessageId = `assistant-${Date.now()}`
+    addMessage({
+      id: assistantMessageId,
+      sessionId: 'current',
+      role: 'ASSISTANT' as const,
+      content: '',
+      tokensUsed: 0,
+      pointsCost: 0,
+      createdAt: new Date(),
+    })
+    
+    try {
+      // Create abort controller for this request
+      abortControllerRef.current = new AbortController()
+      
+      // Build messages array for API
+      const apiMessages = [
+        ...messages.map(m => ({
+          role: m.role.toLowerCase() as 'user' | 'assistant',
+          content: m.content,
+        })),
+        { role: 'user' as const, content: content.trim() },
+      ]
+      
+      // Call API
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: apiMessages,
+          modelId: selectedModelId,
+          skillId: selectedSkillId,
+        }),
+        signal: abortControllerRef.current.signal,
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to get response')
       }
-      setMessages(prev => [...prev, assistantMessage])
-      setIsLoading(false)
-    }, 1500)
-  }
+      
+      setSending(false)
+      setStreaming(true)
+      
+      // Process streaming response
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+      let fullContent = ''
+      let telemetryData: Record<string, unknown> | null = null
+      
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          
+          const chunk = decoder.decode(value, { stream: true })
+          const lines = chunk.split('\n')
+          
+          for (const line of lines) {
+            if (line.startsWith('0:"')) {
+              // Text chunk
+              try {
+                const text = line.slice(3, -1)
+                  .replace(/\\n/g, '\n')
+                  .replace(/\\"/g, '"')
+                  .replace(/\\\\/g, '\\')
+                fullContent += text
+                updateLastMessage(fullContent)
+              } catch {
+                // Ignore parse errors
+              }
+            } else if (line.startsWith('e:')) {
+              // Telemetry data
+              try {
+                telemetryData = JSON.parse(line.slice(2))
+              } catch {
+                // Ignore parse errors
+              }
+            }
+          }
+        }
+      }
+      
+      setStreaming(false)
+      
+      // Update telemetry if available
+      if (telemetryData) {
+        const { promptTokens, completionTokens, totalCost } = telemetryData as {
+          promptTokens: number
+          completionTokens: number
+          totalCost: number
+        }
+        updateTelemetryAfterResponse(promptTokens, completionTokens, totalCost)
+        deductPoints(totalCost)
+      }
+      
+    } catch (err) {
+      setStreaming(false)
+      setSending(false)
+      
+      if (err instanceof Error && err.name === 'AbortError') {
+        // Request was cancelled, don't show error
+        return
+      }
+      
+      setError(err instanceof Error ? err.message : 'An error occurred')
+    }
+  }, [messages, selectedModelId, selectedSkillId, isStreaming, isSending, addMessage, updateLastMessage, setStreaming, setSending, setError, updateTelemetryAfterResponse, deductPoints])
 
-  const handleNewChat = () => {
-    setMessages([])
-  }
+  // Regenerate last response
+  const handleRegenerate = useCallback(() => {
+    if (messages.length < 2 || isStreaming || isSending) return
+    
+    // Get the last user message
+    const lastUserMessage = [...messages].reverse().find(m => m.role === 'USER')
+    if (!lastUserMessage) return
+    
+    // Remove the last assistant message
+    const newMessages = messages.slice(0, -1)
+    
+    // Re-send the last user message
+    // First update the store to remove the last message
+    useChatStore.setState({ messages: newMessages })
+    
+    // Then send the message again
+    handleSendMessage(lastUserMessage.content)
+  }, [messages, isStreaming, isSending, handleSendMessage])
 
-  // Calculate context status
-  const getContextStatus = (): ContextStatus => {
-    const percentage = (mockTelemetry.contextUsed / mockTelemetry.contextLimit) * 100
-    if (percentage > 90) return 'critical'
-    if (percentage > 75) return 'warning'
-    return 'normal'
-  }
+  // Delete chat with confirmation
+  const handleDeleteChat = useCallback(() => {
+    clearSession()
+    setShowDeleteDialog(false)
+  }, [clearSession])
+
+  // Start new chat
+  const handleNewChat = useCallback(() => {
+    startNewSession()
+  }, [startNewSession])
 
   return (
-    <div className="flex gap-6 h-[calc(100vh-7rem)]">
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
-        {/* Controls Bar */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            {/* Model Selector */}
-            <Select value={selectedModel} onValueChange={setSelectedModel}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Seleccionar modelo" />
-              </SelectTrigger>
-              <SelectContent>
-                {models.map((model) => (
-                  <SelectItem key={model.id} value={model.id}>
-                    <div className="flex flex-col">
-                      <span>{model.name}</span>
-                      <span className="text-xs text-muted-foreground">{model.provider}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Skill Selector */}
-            <Select value={selectedSkill} onValueChange={setSelectedSkill}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Seleccionar skill" />
-              </SelectTrigger>
-              <SelectContent>
-                {skills.map((skill) => (
-                  <SelectItem key={skill.id} value={skill.id}>
-                    <div className="flex flex-col">
-                      <span>{skill.name}</span>
-                      <span className="text-xs text-muted-foreground">{skill.description}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleNewChat}>
-              <Plus className="w-4 h-4 mr-2" />
-              Nuevo Chat
-            </Button>
-            <Button variant="ghost" size="icon">
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          </div>
+    <div className="h-[calc(100vh-8rem)] flex flex-col">
+      {/* Model and Skill Selectors - Moved from Header */}
+      <div className="flex flex-wrap justify-center gap-4 mb-4">
+        {/* Model Selector */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Modelo:</span>
+          <Select value={selectedModelId} onValueChange={setSelectedModelId}>
+            <SelectTrigger className="w-[180px] h-9">
+              <SelectValue placeholder="Seleccionar modelo" />
+            </SelectTrigger>
+            <SelectContent>
+              {AI_MODELS.filter(m => m.isAvailable).map((model) => (
+                <SelectItem key={model.id} value={model.id}>
+                  <div className="flex flex-col">
+                    <span>{model.name}</span>
+                    <span className="text-xs text-muted-foreground">{model.providerDisplayName}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* Context Bar */}
+        {/* Skill Selector */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Asistente:</span>
+          <Select value={selectedSkillId} onValueChange={setSelectedSkillId}>
+            <SelectTrigger className="w-[200px] h-9">
+              <SelectValue placeholder="Seleccionar asistente" />
+            </SelectTrigger>
+            <SelectContent className="max-h-[400px]">
+              {Object.entries(skillsByCategory).map(([category, skills]) => (
+                <div key={category}>
+                  <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                    {getCategoryLabel(category as SkillConfig['category'])}
+                  </div>
+                  {skills.map((skill) => {
+                    const IconComponent = skillIcons[skill.icon] || Bot
+                    return (
+                      <SelectItem key={skill.id} value={skill.id}>
+                        <div className="flex items-center gap-2">
+                          <IconComponent className="h-4 w-4" />
+                          <div className="flex flex-col">
+                            <span>{skill.name}</span>
+                            <span className="text-xs text-muted-foreground line-clamp-1">
+                              {skill.description}
+                            </span>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    )
+                  })}
+                </div>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Context Bar */}
+      <div className="mb-4">
         <ContextBar
-          used={mockTelemetry.contextUsed}
-          limit={currentModel?.contextLimit || 128000}
-          status={getContextStatus()}
-          className="mb-4"
-        />
-
-        {/* Chat Interface */}
-        <Card className="flex-1 overflow-hidden">
-          <ChatInterface
-            messages={messages}
-            isLoading={isLoading}
-            onSendMessage={handleSendMessage}
-            className="h-full"
-          />
-        </Card>
-      </div>
-
-      {/* Right Sidebar - Telemetry */}
-      <div className="w-80 flex-shrink-0">
-        <TelemetryPanel
-          telemetry={mockTelemetry}
-          pointsBalance={10000}
-          dailyLimit={10000}
-          dailyUsage={7500}
+          used={telemetry.contextUsed}
+          limit={telemetry.contextLimit}
+          status={contextStatus}
         />
       </div>
+      
+      {/* Chat Interface */}
+      <Card className="flex-1 overflow-hidden">
+        <ChatInterface
+          messages={messages}
+          isLoading={isStreaming || isSending}
+          onSendMessage={handleSendMessage}
+          onRegenerate={handleRegenerate}
+          onDeleteChat={() => setShowDeleteDialog(true)}
+        />
+      </Card>
+      
+      {/* Error Display */}
+      {error && (
+        <div className="mt-4 p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive">
+          <p className="text-sm font-medium">Error: {error}</p>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar conversación?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará todos los mensajes de la conversación actual. 
+              No se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteChat}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
