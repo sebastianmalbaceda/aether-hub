@@ -5,15 +5,44 @@ import { prisma } from '@/lib/prisma'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+// Mock user data for development/demo mode when no auth is present
+const MOCK_USER = {
+  user: {
+    id: 'user_demo_123',
+    email: 'demo@aether.local',
+    fullName: 'Usuario Demo',
+    avatarUrl: null,
+    role: 'USER',
+    pointsBalance: 10000,
+    isActive: true,
+    createdAt: new Date().toISOString(),
+  },
+  subscription: null,
+  settings: {
+    dailyPointsLimit: 10000,
+    sessionTokensLimit: 100000,
+    preferredModel: 'llama-3.1-8b-instant',
+    theme: 'dark',
+    language: 'es',
+  },
+  points: {
+    balance: 10000,
+    dailyUsage: 0,
+    dailyLimit: 10000,
+    remainingToday: 10000,
+  }
+}
+
 export async function GET() {
   try {
     // Verify authentication
     const authUser = await getAuthUser()
+    
+    // If no auth user, return mock data for demo/development
+    // This allows the frontend to work without authentication
     if (!authUser) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      console.log('[/api/user/me] No auth user, returning mock data for demo mode')
+      return NextResponse.json(MOCK_USER)
     }
 
     // Get user data with subscription and settings

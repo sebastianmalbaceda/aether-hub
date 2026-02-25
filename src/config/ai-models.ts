@@ -33,6 +33,9 @@ export const AI_MODELS: AIModelConfig[] = [
   // ============================================
   // OpenAI Models
   // ============================================
+  // ============================================
+  // OpenAI Models (Premium - Requiere API Key propia)
+  // ============================================
   {
     id: 'gpt-4o',
     name: 'GPT-4o',
@@ -44,12 +47,12 @@ export const AI_MODELS: AIModelConfig[] = [
     supportsFunctionCalling: true,
     supportsJsonMode: true,
     pricing: {
-      inputPer1K: 5,    // 5 puntos por 1K tokens de entrada
-      outputPer1K: 15,  // 15 puntos por 1K tokens de salida
+      inputPer1K: 5,
+      outputPer1K: 15,
     },
     tier: 'premium',
-    isAvailable: true,
-    description: 'Modelo multimodal más avanzado de OpenAI. Ideal para tareas complejas.',
+    isAvailable: false, // Deshabilitado - requiere API key propia
+    description: 'Modelo multimodal más avanzado de OpenAI. (Premium - No disponible)',
   },
   {
     id: 'gpt-4o-mini',
@@ -66,8 +69,8 @@ export const AI_MODELS: AIModelConfig[] = [
       outputPer1K: 0.6,
     },
     tier: 'standard',
-    isAvailable: true,
-    description: 'Versión ligera y económica de GPT-4o. Perfecto para tareas rápidas.',
+    isAvailable: false, // Deshabilitado - requiere API key propia
+    description: 'Versión ligera y económica de GPT-4o. (Premium - No disponible)',
   },
   {
     id: 'gpt-4-turbo',
@@ -84,8 +87,8 @@ export const AI_MODELS: AIModelConfig[] = [
       outputPer1K: 30,
     },
     tier: 'flagship',
-    isAvailable: true,
-    description: 'GPT-4 con visión y contexto de 128K tokens.',
+    isAvailable: false, // Deshabilitado - requiere API key propia
+    description: 'GPT-4 con visión y contexto de 128K tokens. (Premium - No disponible)',
   },
   {
     id: 'o1-preview',
@@ -102,8 +105,8 @@ export const AI_MODELS: AIModelConfig[] = [
       outputPer1K: 60,
     },
     tier: 'flagship',
-    isAvailable: true,
-    description: 'Modelo de razonamiento avanzado para problemas complejos.',
+    isAvailable: false, // Deshabilitado - requiere API key propia
+    description: 'Modelo de razonamiento avanzado para problemas complejos. (Premium - No disponible)',
   },
   {
     id: 'o1-mini',
@@ -120,12 +123,12 @@ export const AI_MODELS: AIModelConfig[] = [
       outputPer1K: 12,
     },
     tier: 'premium',
-    isAvailable: true,
-    description: 'Versión económica del modelo de razonamiento o1.',
+    isAvailable: false, // Deshabilitado - requiere API key propia
+    description: 'Versión económica del modelo de razonamiento o1. (Premium - No disponible)',
   },
 
   // ============================================
-  // Anthropic Models
+  // Anthropic Models (Premium - Requiere API Key propia)
   // ============================================
   {
     id: 'claude-3-5-sonnet-20241022',
@@ -142,8 +145,8 @@ export const AI_MODELS: AIModelConfig[] = [
       outputPer1K: 15,
     },
     tier: 'premium',
-    isAvailable: true,
-    description: 'El modelo más inteligente de Anthropic. Excelente para código y análisis.',
+    isAvailable: false, // Deshabilitado - requiere API key propia
+    description: 'El modelo más inteligente de Anthropic. (Premium - No disponible)',
   },
   {
     id: 'claude-3-5-haiku-20241022',
@@ -160,8 +163,8 @@ export const AI_MODELS: AIModelConfig[] = [
       outputPer1K: 4,
     },
     tier: 'standard',
-    isAvailable: true,
-    description: 'Modelo rápido y económico de Anthropic. Ideal para respuestas rápidas.',
+    isAvailable: false, // Deshabilitado - requiere API key propia
+    description: 'Modelo rápido y económico de Anthropic. (Premium - No disponible)',
   },
   {
     id: 'claude-3-opus-20240229',
@@ -178,8 +181,8 @@ export const AI_MODELS: AIModelConfig[] = [
       outputPer1K: 75,
     },
     tier: 'flagship',
-    isAvailable: true,
-    description: 'El modelo más potente de Claude para tareas que requieren máxima inteligencia.',
+    isAvailable: false, // Deshabilitado - requiere API key propia
+    description: 'El modelo más potente de Claude. (Premium - No disponible)',
   },
 
   // ============================================
@@ -373,6 +376,24 @@ export const AI_MODELS: AIModelConfig[] = [
     description: 'Versión rápida y económica de Gemini. Gran relación calidad-precio.',
   },
   {
+    id: 'gemini-1.5-flash-8b',
+    name: 'Gemini 1.5 Flash 8B',
+    provider: 'GOOGLE',
+    providerDisplayName: 'Google',
+    contextWindow: 1000000,
+    maxOutputTokens: 8192,
+    supportsVision: true,
+    supportsFunctionCalling: true,
+    supportsJsonMode: true,
+    pricing: {
+      inputPer1K: 0,
+      outputPer1K: 0,
+    },
+    tier: 'free',
+    isAvailable: true,
+    description: 'Modelo Gemini Flash 8B gratuito de Google. Rápido y eficiente.',
+  },
+  {
     id: 'gemini-2.0-flash-exp',
     name: 'Gemini 2.0 Flash (Experimental)',
     provider: 'GOOGLE',
@@ -413,8 +434,10 @@ export function getAvailableModels(): AIModelConfig[] {
 }
 
 export function getDefaultModel(): AIModelConfig {
-  // Default to GPT-4o Mini as it's a good balance of cost/performance
-  return AI_MODELS.find(m => m.id === 'gpt-4o-mini') || AI_MODELS[0]
+  // Default to Llama 3.1 8B Instant (Groq Free Tier) as default
+  return AI_MODELS.find(m => m.id === 'llama-3.1-8b-instant' && m.isAvailable) ||
+         AI_MODELS.find(m => m.isAvailable) ||
+         AI_MODELS[0]
 }
 
 /**

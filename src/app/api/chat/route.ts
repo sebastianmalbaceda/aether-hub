@@ -20,7 +20,7 @@ const anthropic = createAnthropic({
 })
 
 const google = createGoogleGenerativeAI({
-  apiKey: process.env.GOOGLE_API_KEY,
+  apiKey: process.env.GOOGLE_AI_API_KEY || process.env.GOOGLE_API_KEY,
 })
 
 // Groq uses OpenAI-compatible API
@@ -50,18 +50,29 @@ function getModelInstance(modelId: string) {
   }
 }
 
+// Demo mode: Allow requests without authentication for development
+// Set DEMO_MODE=true in .env to enable, or it auto-enables if no DATABASE_URL
+const isDemoMode = () => {
+  if (process.env.DEMO_MODE === 'true') return true
+  if (!process.env.DATABASE_URL) return true
+  return false
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Verify authentication
     const authUser = await getAuthUser()
-    if (!authUser) {
+    const demoMode = isDemoMode()
+    
+    // Allow requests without authentication in demo mode
+    if (!authUser && !demoMode) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
       )
     }
 
-    const userId = authUser.id
+    const userId = authUser?.id || 'demo_user'
     const body = await request.json()
     
     const { 
@@ -96,45 +107,63 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get user's current points balance and settings
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { 
-        pointsBalance: true,
-        settings: {
-          select: { dailyPointsLimit: true }
-        }
-      },
-    })
-
-    if (!user) {
+    // Check if model is available (premium models disabled)
+    if (!modelConfig.isAvailable) {
       return new Response(
-        JSON.stringify({ error: 'User not found' }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          error: `El modelo ${modelConfig.name} no está disponible en el plan actual. Por favor, selecciona un modelo gratuito de Groq o Google.`,
+          code: 'MODEL_UNAVAILABLE',
+          modelName: modelConfig.name,
+          provider: modelConfig.providerDisplayName,
+        }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
       )
     }
 
-    const dailyPointsLimit = user.settings?.dailyPointsLimit || 10000
-
-    // Check daily usage
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    // Get user's current points balance and settings (skip in demo mode)
+    let user: { pointsBalance: number; settings: { dailyPointsLimit: number } | null } | null = null
+    let dailyUsed = 0
     
-    const todayUsage = await prisma.transaction.aggregate({
-      where: {
-        userId,
-        type: 'USAGE_DEDUCTION',
-        createdAt: { gte: today },
-      },
-      _sum: { pointsAmount: true },
-    })
+    if (!demoMode && authUser) {
+      user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          pointsBalance: true,
+          settings: {
+            select: { dailyPointsLimit: true }
+          }
+        },
+      })
 
-    const dailyUsed = Math.abs(todayUsage._sum.pointsAmount || 0)
+      if (!user) {
+        return new Response(
+          JSON.stringify({ error: 'User not found' }),
+          { status: 404, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Check daily usage
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      
+      const todayUsage = await prisma.transaction.aggregate({
+        where: {
+          userId,
+          type: 'USAGE_DEDUCTION',
+          createdAt: { gte: today },
+        },
+        _sum: { pointsAmount: true },
+      })
+
+      dailyUsed = Math.abs(todayUsage._sum.pointsAmount || 0)
+    }
+
+    const dailyPointsLimit = user?.settings?.dailyPointsLimit || 10000
     const remainingDaily = dailyPointsLimit - dailyUsed
 
-    if (remainingDaily <= 0) {
+    if (!demoMode && remainingDaily <= 0) {
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           error: 'Daily limit exceeded',
           code: 'DAILY_LIMIT_EXCEEDED',
           dailyLimit: dailyPointsLimit,
@@ -153,11 +182,38 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Convert messages to core format for AI SDK
-    const coreMessages = messages.map((msg: { role: string; content: string }) => ({
-      role: msg.role as 'system' | 'user' | 'assistant',
-      content: msg.content,
-    }))
+    // SANITIZATION: Convert messages to clean format for AI SDK
+    // Groq and strict models only accept { role: 'user' | 'assistant', content: string }
+    // Frontend may send complex objects or arrays that cause 400 errors
+    const coreMessages = messages.map((msg: { role: string; content: unknown }) => {
+      // Extract pure text from content
+      let pureText = ''
+      
+      if (typeof msg.content === 'string') {
+        pureText = msg.content
+      } else if (Array.isArray(msg.content)) {
+        // Handle multimodal content arrays - extract only text parts
+        pureText = msg.content
+          .filter((part: unknown) =>
+            typeof part === 'object' && part !== null && (part as { type?: string }).type === 'text'
+          )
+          .map((part: unknown) => (part as { text?: string }).text || '')
+          .join('\n')
+      } else if (msg.content !== null && msg.content !== undefined) {
+        pureText = String(msg.content)
+      }
+
+      // Normalize role - Groq doesn't accept 'function' role
+      let normalizedRole = msg.role?.toLowerCase() || 'user'
+      if (normalizedRole === 'function' || normalizedRole === 'system') {
+        normalizedRole = 'assistant'
+      }
+
+      return {
+        role: normalizedRole as 'user' | 'assistant',
+        content: pureText,
+      }
+    }).filter((msg) => msg.content.trim().length > 0) // Remove empty messages
 
     // Get model instance
     const model = getModelInstance(modelId)
@@ -209,8 +265,8 @@ export async function POST(request: NextRequest) {
             totalCompletionTokens
           )
 
-          // Check if user has enough points
-          if (pointsUsed > user.pointsBalance) {
+          // Check if user has enough points (skip in demo mode)
+          if (!demoMode && user && pointsUsed > user.pointsBalance) {
             const errorData = JSON.stringify({
               type: 'error',
               code: 'INSUFFICIENT_POINTS',
@@ -223,38 +279,40 @@ export async function POST(request: NextRequest) {
             return
           }
 
-          // Deduct points and record transaction
-          await prisma.$transaction([
-            // Update user balance
-            prisma.user.update({
-              where: { id: userId },
-              data: {
-                pointsBalance: { decrement: pointsUsed },
-              },
-            }),
-            // Create transaction record
-            prisma.transaction.create({
-              data: {
-                userId,
-                type: 'USAGE_DEDUCTION',
-                pointsAmount: -pointsUsed,
-                description: `Chat usage: ${modelConfig.name}`,
-                metadata: {
-                  modelId,
-                  skillId,
-                  promptTokens: totalPromptTokens,
-                  completionTokens: totalCompletionTokens,
-                  totalTokens: totalPromptTokens + totalCompletionTokens,
+          // Deduct points and record transaction (skip in demo mode)
+          if (!demoMode && user) {
+            await prisma.$transaction([
+              // Update user balance
+              prisma.user.update({
+                where: { id: userId },
+                data: {
+                  pointsBalance: { decrement: pointsUsed },
                 },
-              },
-            }),
-          ])
+              }),
+              // Create transaction record
+              prisma.transaction.create({
+                data: {
+                  userId,
+                  type: 'USAGE_DEDUCTION',
+                  pointsAmount: -pointsUsed,
+                  description: `Chat usage: ${modelConfig.name}`,
+                  metadata: {
+                    modelId,
+                    skillId,
+                    promptTokens: totalPromptTokens,
+                    completionTokens: totalCompletionTokens,
+                    totalTokens: totalPromptTokens + totalCompletionTokens,
+                  },
+                },
+              }),
+            ])
+          }
 
           // Send telemetry data
           const telemetryData = JSON.stringify({
             type: 'telemetry',
             pointsUsed,
-            remainingPoints: user.pointsBalance - pointsUsed,
+            remainingPoints: demoMode ? 10000 - pointsUsed : (user?.pointsBalance || 10000) - pointsUsed,
             promptTokens: totalPromptTokens,
             completionTokens: totalCompletionTokens,
             totalTokens: totalPromptTokens + totalCompletionTokens,
@@ -287,8 +345,52 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Chat API error:', error)
     
+    // Handle specific error types
+    if (error instanceof Error) {
+      // Rate limit errors (429)
+      if (error.message.includes('429') ||
+          error.message.includes('rate limit') ||
+          error.message.includes('quota') ||
+          error.message.includes('Too Many Requests')) {
+        return new Response(
+          JSON.stringify({
+            error: 'Límite gratuito alcanzado. Por favor, espera unos minutos antes de continuar.',
+            code: 'RATE_LIMIT_EXCEEDED',
+            retryAfter: 60, // Suggest retry after 60 seconds
+          }),
+          { status: 429, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+      
+      // Authentication errors
+      if (error.message.includes('401') ||
+          error.message.includes('Unauthorized') ||
+          error.message.includes('Invalid API key')) {
+        return new Response(
+          JSON.stringify({
+            error: 'Error de autenticación con el proveedor de IA. Verifica la configuración.',
+            code: 'AUTH_ERROR',
+          }),
+          { status: 401, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+      
+      // Context length exceeded
+      if (error.message.includes('context') ||
+          error.message.includes('token') ||
+          error.message.includes('maximum')) {
+        return new Response(
+          JSON.stringify({
+            error: 'El mensaje es demasiado largo. Por favor, reduce la longitud del contexto.',
+            code: 'CONTEXT_LENGTH_EXCEEDED',
+          }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+    }
+    
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: error instanceof Error ? error.message : 'Internal server error',
         code: 'INTERNAL_ERROR',
       }),

@@ -53,7 +53,7 @@ export function ContextBar({ used, limit, status, className }: ContextBarProps) 
   }
 
   return (
-    <div className={cn('rounded-lg border border-border p-4', className)}>
+    <div className={cn('rounded-lg bg-background-secondary/50 backdrop-blur-sm p-4', className)}>
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <Icon className={cn('w-4 h-4', config.textColor)} />

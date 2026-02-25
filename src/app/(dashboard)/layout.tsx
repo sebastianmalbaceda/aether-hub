@@ -24,9 +24,9 @@ export default function DashboardLayout({
         {/* ═══════════════════════════════════════════════════════════════
             1. SIDEBAR IZQUIERDO (Desktop: shrink-0 con transición)
         ═══════════════════════════════════════════════════════════════ */}
-        {/* Desktop Sidebar - shrink-0 para que no se comprima */}
+        {/* FASE 3: Desktop Sidebar - border sutil estructural */}
         <div className={cn(
-          "hidden lg:block shrink-0 transition-[width] duration-300 ease-in-out border-r border-border h-full",
+          "hidden lg:block shrink-0 transition-[width] duration-300 ease-in-out border-r border-border/50 h-full bg-background-secondary/30",
           sidebarCollapsed ? "w-16" : "w-64"
         )}>
           <Sidebar 

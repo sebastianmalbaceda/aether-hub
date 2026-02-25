@@ -197,9 +197,9 @@ function MessageBubble({
           )}
         </div>
 
-        {/* Action buttons for assistant messages */}
+        {/* FASE 3: Action buttons sin border, solo separación visual por fondo */}
         {message.role === 'ASSISTANT' && message.content && (
-          <div className="flex items-center gap-1 mt-2 pt-2 border-t border-border/50">
+          <div className="flex items-center gap-1 mt-2 pt-2 bg-muted/20 rounded-md p-1 -mx-1">
             <Button 
               variant="ghost" 
               size="icon" 
@@ -270,7 +270,7 @@ export function ChatInterface({
   const [input, setInput] = useState('')
   const [, setFeedbackVersion] = useState(0) // For re-rendering on feedback change
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const { toast } = useToast()
 
   // Auto scroll to bottom when new messages arrive
@@ -278,19 +278,40 @@ export function ChatInterface({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // Auto-adjust textarea height
+  const adjustTextareaHeight = useCallback(() => {
+    const textarea = textareaRef.current
+    if (textarea) {
+      textarea.style.height = 'auto' // Reset
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px` // Grow up to 200px (~8-10 lines)
+    }
+  }, [])
+
+  // Adjust height when input changes
+  useEffect(() => {
+    adjustTextareaHeight()
+  }, [input, adjustTextareaHeight])
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (input.trim() && !isLoading) {
       onSendMessage(input.trim())
       setInput('')
+      // Reset textarea height after sending
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.style.height = 'auto'
+        }
+      }, 10)
     }
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSubmit(e)
     }
+    // Shift+Enter allows newline (default behavior)
   }
 
   const copyToClipboard = useCallback(async (content: string) => {
@@ -365,23 +386,25 @@ export function ChatInterface({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area - Responsive with safe area for mobile */}
-      <div className="border-t border-border p-3 md:p-4 bg-background">
-        <form onSubmit={handleSubmit} className="flex gap-2">
-          <Input
-            ref={inputRef}
+      {/* FASE 3: Input Area con Textarea auto-creciente */}
+      <div className="p-3 md:p-4 bg-background-secondary/50 backdrop-blur-sm">
+        <form onSubmit={handleSubmit} className="flex gap-2 items-end">
+          <textarea
+            ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Escribe tu mensaje..."
+            placeholder="Escribe tu mensaje... (Shift + Enter para salto de línea)"
             disabled={isLoading}
-            className="flex-1 text-base"
+            rows={1}
+            className="flex-1 text-base bg-background border border-border/50 rounded-md px-4 py-3 resize-none focus:outline-none focus:ring-1 focus:ring-primary-500 placeholder:text-muted-foreground disabled:opacity-50 custom-scrollbar"
+            style={{ minHeight: '48px', maxHeight: '200px' }}
           />
           <Button
             type="submit"
             disabled={!input.trim() || isLoading}
             size="icon"
-            className="flex-shrink-0"
+            className="flex-shrink-0 h-12 w-12"
           >
             {isLoading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -396,14 +419,14 @@ export function ChatInterface({
               size="icon"
               onClick={onDeleteChat}
               title="Eliminar chat"
-              className="flex-shrink-0 hidden sm:inline-flex"
+              className="flex-shrink-0 hidden sm:inline-flex h-12 w-12"
             >
               <Trash2 className="w-4 h-4" />
             </Button>
           )}
         </form>
         <p className="text-xs text-muted-foreground mt-2 hidden md:block">
-          Presiona Enter para enviar. El modelo seleccionado procesará tu mensaje.
+          Presiona Enter para enviar, Shift + Enter para salto de línea.
         </p>
       </div>
     </div>

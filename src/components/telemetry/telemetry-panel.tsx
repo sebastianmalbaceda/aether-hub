@@ -24,8 +24,11 @@ export function TelemetryPanel() {
   
   const remainingToday = Math.max(dailyLimit - dailyUsage, 0)
 
-  // Format numbers with K/M suffix
-  const formatNumber = (num: number) => {
+  // Format numbers with K/M suffix - null-safe
+  const formatNumber = (num: number | null | undefined): string => {
+    if (num === null || num === undefined || isNaN(num)) {
+      return '0'
+    }
     if (num >= 1000000) {
       return `${(num / 1000000).toFixed(1)}M`
     }
@@ -50,17 +53,17 @@ export function TelemetryPanel() {
         <h3 className="text-sm font-medium">Sesión Actual</h3>
       </div>
 
-      {/* FASE 3: Active Model & Skill compactados como badges de solo lectura */}
+      {/* FASE 3: Active Model & Skill compactados como badges sin borders */}
       <div className="flex flex-wrap gap-2">
         {selectedModel && (
-          <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-background-secondary/50 backdrop-blur-sm border border-border/50 text-xs">
+          <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-background-secondary/50 backdrop-blur-sm text-xs">
             <Bot className="w-3 h-3 text-primary-400" />
             <span className="text-muted-foreground">Modelo:</span>
             <span className="font-medium truncate max-w-[100px]">{selectedModel.name}</span>
           </div>
         )}
         {selectedSkill && (
-          <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-background-secondary/50 backdrop-blur-sm border border-border/50 text-xs">
+          <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-background-secondary/50 backdrop-blur-sm text-xs">
             <Sparkles className="w-3 h-3 text-violet-400" />
             <span className="text-muted-foreground">Asistente:</span>
             <span className="font-medium truncate max-w-[100px]">{selectedSkill.name}</span>
@@ -119,8 +122,8 @@ export function TelemetryPanel() {
         />
       </div>
 
-      {/* FASE 3: Última Petición y Total Sesión unificados en grid compacto */}
-      <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border">
+      {/* FASE 3: Última Petición y Total Sesión unificados en grid compacto sin border */}
+      <div className="grid grid-cols-2 gap-3 pt-2">
         {/* Last Request Stats */}
         <div className="space-y-1.5">
           <p className="text-xs text-muted-foreground">Última Petición</p>

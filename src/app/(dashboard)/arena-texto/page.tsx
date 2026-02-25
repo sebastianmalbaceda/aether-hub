@@ -7,10 +7,11 @@ import { ChatInterface } from '@/components/chat/chat-interface'
 import { ContextBar } from '@/components/telemetry/context-bar'
 import { TelemetryPanel } from '@/components/telemetry/telemetry-panel'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
-import { Plus, Trash2, Bot, Zap, Book, Pen, Megaphone, GraduationCap, Code, GitPullRequest, Bug as BugIcon, BarChart, Search, Lightbulb, Layout, School, Languages, PanelRight } from 'lucide-react'
+import { Plus, Trash2, Bot, Zap, Book, Pen, Megaphone, GraduationCap, Code, GitPullRequest, Bug as BugIcon, BarChart, Search, Lightbulb, Layout, School, Languages, PanelRight, EyeOff, SlidersHorizontal } from 'lucide-react'
 import { useChatStore, selectFormattedContextUsage, selectContextStatus } from '@/stores/chat-store'
 import { useUserStore } from '@/stores/user-store'
 import { estimateTokens, AI_MODELS, SKILLS, getCategoryLabel } from '@/config'
+import { cn } from '@/lib/utils'
 import type { SkillConfig } from '@/config'
 import {
   AlertDialog,
@@ -86,6 +87,12 @@ export default function ArenaTextoPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [panelOpen, setPanelOpen] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)
+  
+  // FASE 4: Estado para mostrar telemetría avanzada (oculta por defecto)
+  const [showAdvancedStats, setShowAdvancedStats] = useState(false)
+  
+  // FASE 4: Estado para modo incógnito
+  const [incognitoMode, setIncognitoMode] = useState(false)
 
   // Group skills by category
   const skillsByCategory = SKILLS.reduce((acc, skill) => {
@@ -257,112 +264,172 @@ export default function ArenaTextoPage() {
     startNewSession()
   }, [startNewSession])
 
+  // FASE 2: Ancho adaptativo fluido "tipo Claude" - sin botones, solo CSS adaptativo
+  // El contenido se centra automáticamente con max-w-4xl
+
   return (
-    /* FASE 3: Layout con telemetría integrada dentro de la página */
-    <div className="flex h-full w-full">
-      {/* CENTRO: Área del Chat */}
-      <div className="flex-1 flex flex-col overflow-y-auto min-w-0 p-4 md:p-6 animate-in fade-in duration-500">
-        {/* FASE 2: Botón "Nuevo Chat" movido desde Header global + Selectores responsivos */}
-        <div className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-3 mb-4">
-          {/* New Chat Button - FASE 2: Ubicado estratégicamente cerca de selectores */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleNewChat}
-            className="gap-2 border-primary-500/50 hover:bg-primary-500/10 hover:shadow-[0_0_15px_rgba(139,92,246,0.3)] transition-all duration-200"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Nuevo Chat</span>
-          </Button>
-          {/* Model Selector - FASE 3: z-index adecuado para dropdowns */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Modelo:</span>
-            <Select value={selectedModelId} onValueChange={setSelectedModelId}>
-              <SelectTrigger className="w-[180px] h-9 transition-all duration-200 hover:shadow-[0_0_12px_rgba(139,92,246,0.2)]">
-                <SelectValue placeholder="Seleccionar modelo" />
-              </SelectTrigger>
-              <SelectContent className="z-50">
-                {AI_MODELS.filter(m => m.isAvailable).map((model) => (
-                  <SelectItem key={model.id} value={model.id}>
-                    <div className="flex flex-col">
-                      <span>{model.name}</span>
-                      <span className="text-xs text-muted-foreground">{model.providerDisplayName}</span>
+    /* FASE 1: Layout con scroll corregido - overflow-hidden en padre, scroll en hijo correcto */
+    <div className="flex h-full w-full overflow-hidden">
+      {/* CENTRO: Área del Chat - FASE 1: flex-col con overflow-hidden */}
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0 animate-in fade-in duration-500">
+        {/* FASE 2: Contenedor con ancho adaptativo centrado */}
+        <div className="mx-auto w-full max-w-4xl px-4 sm:px-6 md:px-8 py-4 md:py-6">
+          {/* FASE 2: Selectores responsivos sin borders innecesarios */}
+          <div className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-3 mb-4">
+            {/* New Chat Button - FASE 2: Ubicado estratégicamente cerca de selectores */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleNewChat}
+              className="gap-2 border-primary-500/50 hover:bg-primary-500/10 hover:shadow-[0_0_15px_rgba(139,92,246,0.3)] transition-all duration-200"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Nuevo Chat</span>
+            </Button>
+            {/* Model Selector - FASE 3: z-index adecuado para dropdowns */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Modelo:</span>
+              <Select value={selectedModelId} onValueChange={setSelectedModelId}>
+                <SelectTrigger className="w-[180px] h-9 transition-all duration-200 hover:shadow-[0_0_12px_rgba(139,92,246,0.2)]">
+                  <SelectValue placeholder="Seleccionar modelo" />
+                </SelectTrigger>
+                <SelectContent className="z-50 max-h-[300px]">
+                  {/* Modelos disponibles primero */}
+                  {AI_MODELS.filter(m => m.isAvailable).map((model) => (
+                    <SelectItem key={model.id} value={model.id}>
+                      <div className="flex flex-col">
+                        <span>{model.name}</span>
+                        <span className="text-xs text-muted-foreground">{model.providerDisplayName} - {model.tier === 'free' ? 'Gratis' : 'Estándar'}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                  {/* Separador para modelos premium deshabilitados */}
+                  {AI_MODELS.filter(m => !m.isAvailable).length > 0 && (
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground/50 border-t border-border mt-1 pt-2">
+                      Premium (No disponible)
                     </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+                  )}
+                  {/* Modelos premium deshabilitados */}
+                  {AI_MODELS.filter(m => !m.isAvailable).map((model) => (
+                    <SelectItem key={model.id} value={model.id} disabled className="opacity-50 cursor-not-allowed">
+                      <div className="flex flex-col">
+                        <span className="text-muted-foreground/50">{model.name}</span>
+                        <span className="text-xs text-muted-foreground/50">{model.providerDisplayName} - Premium</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          {/* Skill Selector - FASE 3: z-index adecuado para dropdowns */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Asistente:</span>
-            <Select value={selectedSkillId} onValueChange={setSelectedSkillId}>
-              <SelectTrigger className="w-[200px] h-9 transition-all duration-200 hover:shadow-[0_0_12px_rgba(139,92,246,0.2)]">
-                <SelectValue placeholder="Seleccionar asistente" />
-              </SelectTrigger>
-              <SelectContent className="max-h-[400px] z-50">
-                {Object.entries(skillsByCategory).map(([category, skills]) => (
-                  <div key={category}>
-                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                      {getCategoryLabel(category as SkillConfig['category'])}
-                    </div>
-                    {skills.map((skill) => {
-                      const IconComponent = skillIcons[skill.icon] || Bot
-                      return (
-                        <SelectItem key={skill.id} value={skill.id}>
-                          <div className="flex items-center gap-2">
-                            <IconComponent className="h-4 w-4" />
-                            <div className="flex flex-col">
-                              <span>{skill.name}</span>
-                              <span className="text-xs text-muted-foreground line-clamp-1">
-                                {skill.description}
-                              </span>
+            {/* Skill Selector - FASE 3: z-index adecuado para dropdowns */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Asistente:</span>
+              <Select value={selectedSkillId} onValueChange={setSelectedSkillId}>
+                <SelectTrigger className="w-[200px] h-9 transition-all duration-200 hover:shadow-[0_0_12px_rgba(139,92,246,0.2)]">
+                  <SelectValue placeholder="Seleccionar asistente" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[400px] z-50">
+                  {Object.entries(skillsByCategory).map(([category, skills]) => (
+                    <div key={category}>
+                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                        {getCategoryLabel(category as SkillConfig['category'])}
+                      </div>
+                      {skills.map((skill) => {
+                        const IconComponent = skillIcons[skill.icon] || Bot
+                        return (
+                          <SelectItem key={skill.id} value={skill.id}>
+                            <div className="flex items-center gap-2">
+                              <IconComponent className="h-4 w-4" />
+                              <div className="flex flex-col">
+                                <span>{skill.name}</span>
+                                <span className="text-xs text-muted-foreground line-clamp-1">
+                                  {skill.description}
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                        </SelectItem>
-                      )
-                    })}
-                  </div>
-                ))}
-              </SelectContent>
-            </Select>
+                          </SelectItem>
+                        )
+                      })}
+                    </div>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* FASE 4: Toggle de Telemetría Avanzada - oculto por defecto */}
+            <Button
+              variant={showAdvancedStats ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setShowAdvancedStats(!showAdvancedStats)}
+              className={cn(
+                "gap-2 transition-all duration-200",
+                showAdvancedStats && "text-primary-400 shadow-[0_0_12px_rgba(139,92,246,0.3)]"
+              )}
+              title={showAdvancedStats ? "Ocultar telemetría avanzada" : "Mostrar telemetría avanzada"}
+              aria-pressed={showAdvancedStats}
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              <span className="hidden sm:inline">Stats</span>
+            </Button>
+            
+            {/* FASE 4: Botón Modo Incógnito */}
+            <Button
+              variant={incognitoMode ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setIncognitoMode(!incognitoMode)}
+              className={cn(
+                "gap-2 transition-all duration-200",
+                incognitoMode && "text-primary-400 shadow-[0_0_12px_rgba(139,92,246,0.3)]"
+              )}
+              title={incognitoMode ? "Modo Incógnito activo: Los mensajes no se guardarán" : "Activar Modo Incógnito"}
+              aria-pressed={incognitoMode}
+            >
+              <EyeOff className="h-4 w-4" />
+              <span className="hidden sm:inline">{incognitoMode ? 'Incógnito' : 'Incógnito'}</span>
+            </Button>
+            
+            {/* Mobile panel toggle button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setPanelOpen(true)}
+              className="xl:hidden transition-all duration-200 hover:shadow-[0_0_12px_rgba(139,92,246,0.2)]"
+            >
+              <PanelRight className="h-5 w-5" />
+            </Button>
           </div>
-          
-          {/* Mobile panel toggle button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setPanelOpen(true)}
-            className="xl:hidden transition-all duration-200 hover:shadow-[0_0_12px_rgba(139,92,246,0.2)]"
-          >
-            <PanelRight className="h-5 w-5" />
-          </Button>
-        </div>
 
-        {/* Context Bar */}
-        <div className="mb-4">
-          <ContextBar
-            used={telemetry.contextUsed}
-            limit={telemetry.contextLimit}
-            status={contextStatus}
-          />
+          {/* FASE 4: Context Bar solo visible si showAdvancedStats está activo */}
+          {showAdvancedStats && (
+            <div className="mb-4">
+              <ContextBar
+                used={telemetry.contextUsed}
+                limit={telemetry.contextLimit}
+                status={contextStatus}
+              />
+            </div>
+          )}
         </div>
         
-        {/* Chat Interface */}
-        <Card className="flex-1 overflow-hidden">
-          <ChatInterface
-            messages={messages}
-            isLoading={isStreaming || isSending}
-            onSendMessage={handleSendMessage}
-            onRegenerate={handleRegenerate}
-            onDeleteChat={() => setShowDeleteDialog(true)}
-          />
-        </Card>
+        {/* FASE 1 & 2: Chat Interface con scroll y ancho adaptativo centrado */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="mx-auto w-full max-w-4xl px-4 sm:px-6 md:px-8 pb-6">
+            <Card className="flex flex-col bg-background-secondary/30 backdrop-blur-sm shadow-none">
+              <ChatInterface
+                messages={messages}
+                isLoading={isStreaming || isSending}
+                onSendMessage={handleSendMessage}
+                onRegenerate={handleRegenerate}
+                onDeleteChat={() => setShowDeleteDialog(true)}
+              />
+            </Card>
+          </div>
+        </div>
         
-        {/* Error Display */}
+        {/* Error Display - FASE 1 FIX: posicionamiento absoluto para no afectar scroll */}
         {error && (
-          <div className="mt-4 p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive max-w-md">
             <p className="text-sm font-medium">Error: {error}</p>
           </div>
         )}
@@ -390,10 +457,12 @@ export default function ArenaTextoPage() {
         </AlertDialog>
       </div>
 
-      {/* DERECHA: Panel de Telemetría (Desktop) - FASE 3: Integrado en la página */}
-      <div className="hidden xl:flex w-80 shrink-0 border-l border-border bg-background-secondary/30 overflow-y-auto">
-        <TelemetryPanel />
-      </div>
+      {/* FASE 4: Panel de Telemetría solo visible si showAdvancedStats está activo */}
+      {showAdvancedStats && (
+        <div className="hidden xl:flex w-80 shrink-0 bg-background-secondary/30 overflow-y-auto">
+          <TelemetryPanel />
+        </div>
+      )}
 
       {/* Mobile Right Panel (Sheet) - FASE 3: Telemetría en móvil */}
       <Sheet open={panelOpen} onOpenChange={setPanelOpen}>

@@ -4,66 +4,37 @@ import Link from 'next/link'
 import {
   Bell,
   Zap,
-  ChevronDown,
-  LogOut,
-  Settings,
-  User,
-  CreditCard,
-  Menu,
-  PanelRight,
-  Sparkles
+  Sparkles,
+  Menu
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useUserStore } from '@/stores/user-store'
 
 interface HeaderProps {
   onMenuClick?: () => void
-  onPanelClick?: () => void
 }
 
-export function Header({ onMenuClick, onPanelClick }: HeaderProps) {
+export function Header({ onMenuClick }: HeaderProps) {
   // User store
   const pointsBalance = useUserStore((state) => state.pointsBalance)
-  const user = useUserStore((state) => state.user)
   
-  // Format points with K suffix
-  const formatPoints = (points: number) => {
+  // Format points with K suffix - null-safe
+  const formatPoints = (points: number | null | undefined) => {
+    if (points === null || points === undefined || isNaN(points)) return '0'
     if (points >= 1000) {
       return `${(points / 1000).toFixed(1).replace(/\.0$/, '')}K`
     }
     return points.toString()
   }
 
-  // Get user initials for avatar fallback
-  const getUserInitials = () => {
-    if (user?.fullName) {
-      return user.fullName
-        .split(' ')
-        .map(n => n[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2)
-    }
-    return 'AU'
-  }
-
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-background/80 backdrop-blur-md px-4 lg:px-6 transition-all duration-300">
-      {/* FASE 1: Estructura limpia sin Logo redundante */}
+    <header className="flex h-16 shrink-0 items-center justify-between border-b border-border/50 bg-background/80 backdrop-blur-md px-4 lg:px-6 transition-all duration-300">
+      {/* FASE 4: Estructura limpia - Usuario y Logo movidos al Sidebar */}
       
       {/* ═══════════════════════════════════════════════════════════════
           IZQUIERDA: Solo botón hamburguesa (móvil)
@@ -98,7 +69,8 @@ export function Header({ onMenuClick, onPanelClick }: HeaderProps) {
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════
-          DERECHA: Puntos + Notificaciones + Avatar (justify-end garantiza alineación)
+          DERECHA: Puntos + Notificaciones (justify-end garantiza alineación)
+          FASE 4: Eliminado PanelRight (telemetría) y menú de usuario (movido a Sidebar)
       ═══════════════════════════════════════════════════════════════ */}
       <div className="flex items-center gap-2 md:gap-4 justify-end">
         {/* Points indicator */}
@@ -106,16 +78,6 @@ export function Header({ onMenuClick, onPanelClick }: HeaderProps) {
           <Zap className="h-4 w-4 text-primary-500" />
           <span className="text-sm font-medium">{formatPoints(pointsBalance)} pts</span>
         </div>
-
-        {/* Right panel toggle (mobile) */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onPanelClick}
-          className="xl:hidden transition-all duration-200 hover:shadow-[0_0_12px_rgba(139,92,246,0.2)]"
-        >
-          <PanelRight className="h-5 w-5" />
-        </Button>
 
         {/* Notifications */}
         <Popover>
@@ -137,68 +99,6 @@ export function Header({ onMenuClick, onPanelClick }: HeaderProps) {
             </div>
           </PopoverContent>
         </Popover>
-
-        {/* User Menu */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex items-center gap-2 px-2 transition-all duration-200 hover:shadow-[0_0_12px_rgba(139,92,246,0.2)]">
-              <Avatar className="h-8 w-8">
-                <AvatarImage 
-                  src={user?.avatarUrl || ''} 
-                  alt={user?.fullName || 'Usuario'} 
-                />
-                <AvatarFallback className="bg-primary-700 text-white text-sm">
-                  {getUserInitials()}
-                </AvatarFallback>
-              </Avatar>
-              <ChevronDown className="h-4 w-4 text-muted-foreground hidden md:block" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>
-              <div className="flex flex-col">
-                <span>{user?.fullName || 'Usuario Demo'}</span>
-                <span className="text-xs font-normal text-muted-foreground">
-                  {user?.email || 'usuario@ejemplo.com'}
-                </span>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/configuracion" className="flex items-center gap-2 cursor-pointer">
-                <User className="h-4 w-4" />
-                Perfil
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/configuracion" className="flex items-center gap-2 cursor-pointer">
-                <Settings className="h-4 w-4" />
-                Configuración
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/pricing" className="flex items-center gap-2 cursor-pointer">
-                <CreditCard className="h-4 w-4" />
-                Suscripción
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive cursor-pointer"
-              onClick={async () => {
-                try {
-                  await fetch('/api/auth/logout', { method: 'POST' })
-                  window.location.href = '/login'
-                } catch (error) {
-                  console.error('Logout failed:', error)
-                }
-              }}
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Cerrar Sesión
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
     </header>
   )
