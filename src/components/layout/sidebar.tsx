@@ -14,25 +14,38 @@ import {
   Zap,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   User,
   Settings,
   CreditCard,
   LogOut,
-  ChevronDown
+  Search,
+  Globe,
+  HelpCircle,
+  ArrowUp,
+  Puzzle,
+  Gift,
+  Info,
+  Sparkles,
+  X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useUserStore } from '@/stores/user-store'
 
-// FASE 3: Navegación principal sin Configuración ni Historial (movidos a otras ubicaciones)
+// Navegación principal
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
   { name: 'Arena Texto', href: '/arena-texto', icon: MessageSquare },
@@ -42,15 +55,25 @@ const navigation = [
   { name: 'Audio', href: '/arena/audio', icon: Music },
 ]
 
-// FASE 3: Chats recientes mockeados para la sección de historial
+// Chats recientes mockeados
 const recentChats = [
   { id: '1', title: 'Generador de código en Python', href: '/arena-texto?session=1' },
   { id: '2', title: 'Resumen de la Divina Comedia', href: '/arena-texto?session=2' },
   { id: '3', title: 'Análisis de datos con Pandas', href: '/arena-texto?session=3' },
   { id: '4', title: 'Ideas para startup tecnológica', href: '/arena-texto?session=4' },
+  { id: '5', title: 'Traducción de documento legal', href: '/arena-texto?session=5' },
+  { id: '6', title: 'Explicación de algoritmos ML', href: '/arena-texto?session=6' },
 ]
 
-// Props adaptadas para asegurar compatibilidad con la responsividad
+// Idiomas disponibles
+const languages = [
+  { code: 'es', name: 'Español' },
+  { code: 'en', name: 'English' },
+  { code: 'pt', name: 'Português' },
+  { code: 'fr', name: 'Français' },
+  { code: 'de', name: 'Deutsch' },
+]
+
 interface SidebarProps {
   isOpen?: boolean
   onClose?: () => void
@@ -71,10 +94,19 @@ export function Sidebar({
   // User store para el perfil
   const user = useUserStore((state) => state.user)
   
-  // Lógica de colapso combinada (interno o externo)
+  // Estado de búsqueda
+  const [searchQuery, setSearchQuery] = useState('')
+  const [showSearch, setShowSearch] = useState(false)
+  
+  // Lógica de colapso combinada
   const [internalCollapsed, setInternalCollapsed] = useState(false)
   const collapsed = externalCollapsed !== undefined ? externalCollapsed : internalCollapsed
   const setCollapsed = onCollapsedChange || setInternalCollapsed
+
+  // Filtrar chats por búsqueda
+  const filteredChats = recentChats.filter(chat => 
+    chat.title.toLowerCase().includes(searchQuery.toLowerCase())
+  )
 
   // Get user initials for avatar fallback
   const getUserInitials = () => {
@@ -89,7 +121,7 @@ export function Sidebar({
     return 'AU'
   }
 
-  // Lógica mejorada para detectar la ruta activa
+  // Detectar ruta activa
   const isNavItemActive = (href: string) => {
     const basePath = href.split('?')[0]
     if (basePath === '/dashboard') {
@@ -101,31 +133,33 @@ export function Sidebar({
   return (
     <aside
       className={cn(
-        // Sidebar relativo para Holy Grail Layout (no fixed)
-        'h-full border-r border-border bg-background-secondary transition-[width] duration-300 ease-in-out flex flex-col',
+        'h-full border-r border-border/50 bg-background-secondary/50 flex flex-col transition-[width] duration-300 ease-in-out',
         collapsed && !isMobile ? 'w-16' : 'w-64',
-        // Ajuste mínimo para que no se rompa si está dentro de un componente Sheet en móvil
-        isMobile && 'w-full relative z-0 border-none'
+        isMobile && 'w-full relative z-0 border-none bg-background-secondary'
       )}
     >
-      {/* Logo - Hover neón en logo */}
-      <div className="flex h-16 items-center justify-between border-b border-border px-4 flex-shrink-0">
+      {/* ═══════════════════════════════════════════════════════════════
+          HEADER - Logo + Colapsar
+      ═══════════════════════════════════════════════════════════════ */}
+      <div className="flex h-14 items-center justify-between border-b border-border/50 px-3 flex-shrink-0">
         {(!collapsed || isMobile) && (
           <Link href="/" className="flex items-center gap-2 group" onClick={onClose}>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-700 transition-all duration-200 group-hover:shadow-[0_0_15px_rgba(139,92,246,0.4)]">
-              <Zap className="h-5 w-5 text-white" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary-600 to-primary-800 transition-all duration-200 group-hover:shadow-glow-sm">
+              <Zap className="h-4 w-4 text-white" />
             </div>
-            <span className="text-xl font-bold gradient-text">Aether</span>
+            <span className="text-lg font-bold gradient-text">Aether</span>
           </Link>
         )}
         
-        {/* Ocultamos el botón de colapsar en vista móvil - Hover neón */}
         {!isMobile && (
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setCollapsed(!collapsed)}
-            className="ml-auto transition-all duration-200 hover:shadow-[0_0_12px_rgba(139,92,246,0.2)]"
+            className={cn(
+              "h-8 w-8 transition-all duration-200 hover:bg-secondary hover:text-primary-400",
+              collapsed && "mx-auto"
+            )}
           >
             {collapsed ? (
               <ChevronRight className="h-4 w-4" />
@@ -136,8 +170,10 @@ export function Sidebar({
         )}
       </div>
 
-      {/* Navigation - Efectos hover neón en items activos */}
-      <nav className="flex-shrink-0 space-y-1 p-2">
+      {/* ═══════════════════════════════════════════════════════════════
+          NAVEGACIÓN PRINCIPAL
+      ═══════════════════════════════════════════════════════════════ */}
+      <nav className="flex-shrink-0 space-y-0.5 p-2">
         {navigation.map((item) => {
           const isActive = isNavItemActive(item.href)
           
@@ -145,13 +181,13 @@ export function Sidebar({
             <Link
               key={item.name}
               href={item.href}
-              onClick={onClose} // Cierra el menú en mobile al hacer clic
+              onClick={onClose}
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200',
                 isActive
-                  ? 'bg-primary-700/20 text-primary-400 shadow-[0_0_12px_rgba(139,92,246,0.2)]'
-                  : 'text-muted-foreground hover:bg-secondary hover:text-foreground hover:shadow-[0_0_8px_rgba(139,92,246,0.1)]',
-                collapsed && !isMobile && 'justify-center'
+                  ? 'bg-primary-500/15 text-primary-400 border-l-2 border-primary-500 shadow-[inset_0_0_20px_rgba(157,78,221,0.1)]'
+                  : 'text-muted-foreground hover:bg-secondary/80 hover:text-foreground',
+                collapsed && !isMobile && 'justify-center px-2'
               )}
               title={collapsed && !isMobile ? item.name : undefined}
             >
@@ -162,100 +198,194 @@ export function Sidebar({
         })}
       </nav>
 
-      {/* FASE 3: Separador antes de Chats Recientes */}
+      {/* ═══════════════════════════════════════════════════════════════
+          SEPARADOR
+      ═══════════════════════════════════════════════════════════════ */}
       {(!collapsed || isMobile) && (
-        <div className="mx-2 my-2 border-t border-border" />
+        <div className="mx-3 border-t border-border/50" />
       )}
 
-      {/* FASE 3: Sección de Chats Recientes (solo visible si NO está colapsado) */}
+      {/* ═══════════════════════════════════════════════════════════════
+          CHATS RECIENTES con Búsqueda
+      ═══════════════════════════════════════════════════════════════ */}
       {(!collapsed || isMobile) && (
-        <div className="flex-1 overflow-y-auto px-2 min-h-0">
-          <div className="mb-2 px-3">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        <div className="flex-1 overflow-hidden flex flex-col min-h-0 px-2 py-2">
+          {/* Header con título y botón de búsqueda */}
+          <div className="flex items-center justify-between mb-2 px-1">
+            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
               Chats Recientes
             </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => setShowSearch(!showSearch)}
+            >
+              {showSearch ? (
+                <X className="h-3.5 w-3.5" />
+              ) : (
+                <Search className="h-3.5 w-3.5" />
+              )}
+            </Button>
           </div>
-          <div className="space-y-1">
-            {recentChats.map((chat) => (
-              <Link
-                key={chat.id}
-                href={chat.href}
-                onClick={onClose}
-                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground transition-all duration-200 truncate"
-                title={chat.title}
-              >
-                <MessageSquare className="h-4 w-4 flex-shrink-0" />
-                <span className="truncate">{chat.title}</span>
-              </Link>
-            ))}
+
+          {/* Barra de búsqueda expandible */}
+          {showSearch && (
+            <div className="mb-2 animate-slide-up">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Buscar en el historial..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-8 pl-8 pr-3 text-sm bg-secondary/50 border-border/50 focus:border-primary-500/50 focus:ring-primary-500/20"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Lista de chats con scroll oculto */}
+          <div className="flex-1 overflow-y-auto scrollbar-hide space-y-0.5">
+            {filteredChats.length > 0 ? (
+              filteredChats.map((chat) => (
+                <Link
+                  key={chat.id}
+                  href={chat.href}
+                  onClick={onClose}
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-secondary/80 hover:text-foreground transition-all duration-200 group"
+                  title={chat.title}
+                >
+                  <MessageSquare className="h-4 w-4 flex-shrink-0 text-muted-foreground/50 group-hover:text-primary-400 transition-colors" />
+                  <span className="truncate">{chat.title}</span>
+                </Link>
+              ))
+            ) : (
+              <div className="px-3 py-4 text-center text-sm text-muted-foreground">
+                <Search className="h-5 w-5 mx-auto mb-2 opacity-50" />
+                <p>No se encontraron chats</p>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* FASE 3: Perfil de Usuario movido desde Header al fondo del Sidebar */}
-      <div className="flex-shrink-0 border-t border-border p-2">
+      {/* ═══════════════════════════════════════════════════════════════
+          FOOTER - Menú de Usuario (Estilo Claude)
+      ═══════════════════════════════════════════════════════════════ */}
+      <div className="flex-shrink-0 border-t border-border/50 p-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
               className={cn(
-                "w-full justify-start gap-2 transition-all duration-200 hover:shadow-[0_0_12px_rgba(139,92,246,0.2)]",
+                "w-full justify-start gap-2 transition-all duration-200 hover:bg-secondary/80",
                 collapsed && !isMobile && "justify-center px-2"
               )}
             >
-              <Avatar className="h-8 w-8">
+              <Avatar className="h-7 w-7">
                 <AvatarImage 
                   src={user?.avatarUrl || ''} 
                   alt={user?.fullName || 'Usuario'} 
                 />
-                <AvatarFallback className="bg-primary-700 text-white text-sm">
+                <AvatarFallback className="bg-gradient-to-br from-primary-600 to-primary-800 text-white text-xs font-medium">
                   {getUserInitials()}
                 </AvatarFallback>
               </Avatar>
               {(!collapsed || isMobile) && (
                 <>
-                  <div className="flex-1 text-left">
+                  <div className="flex-1 text-left min-w-0">
                     <div className="text-sm font-medium truncate">
                       {user?.fullName || 'Usuario Demo'}
                     </div>
-                    <div className="text-xs text-muted-foreground truncate">
+                    <div className="text-[11px] text-muted-foreground truncate">
                       {user?.email || 'usuario@ejemplo.com'}
                     </div>
                   </div>
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
                 </>
               )}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align={collapsed && !isMobile ? "start" : "end"} className="w-56">
-            <DropdownMenuLabel>
-              <div className="flex flex-col">
-                <span>{user?.fullName || 'Usuario Demo'}</span>
-                <span className="text-xs font-normal text-muted-foreground">
-                  {user?.email || 'usuario@ejemplo.com'}
-                </span>
-              </div>
+          
+          <DropdownMenuContent 
+            align={collapsed && !isMobile ? "start" : "end"} 
+            side="top"
+            className="w-64 bg-popover/95 backdrop-blur-xl border-border/50"
+          >
+            {/* Header con email */}
+            <DropdownMenuLabel className="font-normal">
+              <span className="text-xs text-muted-foreground">
+                {user?.email || 'usuario@ejemplo.com'}
+              </span>
             </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/configuracion" className="flex items-center gap-2 cursor-pointer">
-                <User className="h-4 w-4" />
-                Perfil
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/configuracion" className="flex items-center gap-2 cursor-pointer">
+            <DropdownMenuSeparator className="bg-border/50" />
+            
+            {/* Opciones principales */}
+            <DropdownMenuItem asChild className="cursor-pointer">
+              <Link href="/configuracion" className="flex items-center gap-2">
                 <Settings className="h-4 w-4" />
-                Configuración
+                <span>Ajustes</span>
+                <span className="ml-auto text-[10px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">
+                  ⇧⌘,
+                </span>
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/pricing" className="flex items-center gap-2 cursor-pointer">
-                <CreditCard className="h-4 w-4" />
-                Suscripción
+            
+            {/* Submenú de idioma */}
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className="cursor-pointer">
+                <Globe className="h-4 w-4 mr-2" />
+                <span>Idioma</span>
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-40 bg-popover/95 backdrop-blur-xl border-border/50">
+                {languages.map((lang) => (
+                  <DropdownMenuItem 
+                    key={lang.code}
+                    className="cursor-pointer"
+                  >
+                    {lang.name}
+                    {lang.code === 'es' && (
+                      <span className="ml-auto text-primary-400">✓</span>
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            
+            <DropdownMenuItem className="cursor-pointer">
+              <HelpCircle className="h-4 w-4 mr-2" />
+              <span>Obtener ayuda</span>
+            </DropdownMenuItem>
+            
+            <DropdownMenuSeparator className="bg-border/50" />
+            
+            {/* Opciones Premium */}
+            <DropdownMenuItem asChild className="cursor-pointer">
+              <Link href="/pricing" className="flex items-center gap-2">
+                <ArrowUp className="h-4 w-4 text-primary-400" />
+                <span className="text-primary-400">Mejorar plan</span>
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
+            
+            <DropdownMenuItem className="cursor-pointer">
+              <Puzzle className="h-4 w-4 mr-2" />
+              <span>Obtener aplicaciones y extensiones</span>
+            </DropdownMenuItem>
+            
+            <DropdownMenuItem className="cursor-pointer">
+              <Gift className="h-4 w-4 mr-2" />
+              <span>Regalar Aether Premium</span>
+            </DropdownMenuItem>
+            
+            <DropdownMenuItem className="cursor-pointer">
+              <Info className="h-4 w-4 mr-2" />
+              <span>Más información</span>
+            </DropdownMenuItem>
+            
+            <DropdownMenuSeparator className="bg-border/50" />
+            
+            {/* Cerrar sesión */}
             <DropdownMenuItem
               className="text-destructive focus:text-destructive cursor-pointer"
               onClick={async () => {
@@ -268,7 +398,7 @@ export function Sidebar({
               }}
             >
               <LogOut className="h-4 w-4 mr-2" />
-              Cerrar Sesión
+              <span>Cerrar sesión</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -277,14 +407,14 @@ export function Sidebar({
   )
 }
 
-// Mantenemos el componente para versión móvil por si tu layout lo sigue usando
+// Componente para botón de menú móvil
 export function MobileMenuButton({ onClick }: { onClick: () => void }) {
   return (
     <Button
       variant="ghost"
       size="icon"
       onClick={onClick}
-      className="lg:hidden"
+      className="lg:hidden transition-all duration-200 hover:bg-secondary hover:text-primary-400"
     >
       <ChevronRight className="h-5 w-5" />
     </Button>

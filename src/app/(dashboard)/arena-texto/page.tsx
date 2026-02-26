@@ -7,7 +7,7 @@ import { ChatInterface } from '@/components/chat/chat-interface'
 import { ContextBar } from '@/components/telemetry/context-bar'
 import { TelemetryPanel } from '@/components/telemetry/telemetry-panel'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
-import { Plus, Trash2, Bot, Zap, Book, Pen, Megaphone, GraduationCap, Code, GitPullRequest, Bug as BugIcon, BarChart, Search, Lightbulb, Layout, School, Languages, PanelRight, EyeOff, SlidersHorizontal } from 'lucide-react'
+import { Plus, Bot, Zap, Book, Pen, Megaphone, GraduationCap, Code, GitPullRequest, Bug as BugIcon, BarChart, Search, Lightbulb, Layout, School, Languages, PanelRight, EyeOff, SlidersHorizontal, Ghost } from 'lucide-react'
 import { useChatStore, selectFormattedContextUsage, selectContextStatus } from '@/stores/chat-store'
 import { useUserStore } from '@/stores/user-store'
 import { estimateTokens, AI_MODELS, SKILLS, getCategoryLabel } from '@/config'
@@ -88,10 +88,10 @@ export default function ArenaTextoPage() {
   const [panelOpen, setPanelOpen] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)
   
-  // FASE 4: Estado para mostrar telemetría avanzada (oculta por defecto)
+  // Estado para mostrar telemetría avanzada
   const [showAdvancedStats, setShowAdvancedStats] = useState(false)
   
-  // FASE 4: Estado para modo incógnito
+  // Estado para modo incógnito
   const [incognitoMode, setIncognitoMode] = useState(false)
 
   // Group skills by category
@@ -106,10 +106,8 @@ export default function ArenaTextoPage() {
   const handleSendMessage = useCallback(async (content: string) => {
     if (!content.trim() || isStreaming || isSending) return
     
-    // Clear previous errors
     setError(null)
     
-    // Create user message
     const userMessage = {
       id: `user-${Date.now()}`,
       sessionId: 'current',
@@ -120,11 +118,9 @@ export default function ArenaTextoPage() {
       createdAt: new Date(),
     }
     
-    // Add user message to store
     addMessage(userMessage)
     setSending(true)
     
-    // Create placeholder for assistant message
     const assistantMessageId = `assistant-${Date.now()}`
     addMessage({
       id: assistantMessageId,
@@ -137,10 +133,8 @@ export default function ArenaTextoPage() {
     })
     
     try {
-      // Create abort controller for this request
       abortControllerRef.current = new AbortController()
       
-      // Build messages array for API
       const apiMessages = [
         ...messages.map(m => ({
           role: m.role.toLowerCase() as 'user' | 'assistant',
@@ -149,7 +143,6 @@ export default function ArenaTextoPage() {
         { role: 'user' as const, content: content.trim() },
       ]
       
-      // Call API
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -169,7 +162,6 @@ export default function ArenaTextoPage() {
       setSending(false)
       setStreaming(true)
       
-      // Process streaming response
       const reader = response.body?.getReader()
       const decoder = new TextDecoder()
       let fullContent = ''
@@ -185,7 +177,6 @@ export default function ArenaTextoPage() {
           
           for (const line of lines) {
             if (line.startsWith('0:"')) {
-              // Text chunk
               try {
                 const text = line.slice(3, -1)
                   .replace(/\\n/g, '\n')
@@ -197,7 +188,6 @@ export default function ArenaTextoPage() {
                 // Ignore parse errors
               }
             } else if (line.startsWith('e:')) {
-              // Telemetry data
               try {
                 telemetryData = JSON.parse(line.slice(2))
               } catch {
@@ -210,7 +200,6 @@ export default function ArenaTextoPage() {
       
       setStreaming(false)
       
-      // Update telemetry if available
       if (telemetryData) {
         const { promptTokens, completionTokens, totalCost } = telemetryData as {
           promptTokens: number
@@ -226,7 +215,6 @@ export default function ArenaTextoPage() {
       setSending(false)
       
       if (err instanceof Error && err.name === 'AbortError') {
-        // Request was cancelled, don't show error
         return
       }
       
@@ -238,18 +226,11 @@ export default function ArenaTextoPage() {
   const handleRegenerate = useCallback(() => {
     if (messages.length < 2 || isStreaming || isSending) return
     
-    // Get the last user message
     const lastUserMessage = [...messages].reverse().find(m => m.role === 'USER')
     if (!lastUserMessage) return
     
-    // Remove the last assistant message
     const newMessages = messages.slice(0, -1)
-    
-    // Re-send the last user message
-    // First update the store to remove the last message
     useChatStore.setState({ messages: newMessages })
-    
-    // Then send the message again
     handleSendMessage(lastUserMessage.content)
   }, [messages, isStreaming, isSending, handleSendMessage])
 
@@ -264,179 +245,167 @@ export default function ArenaTextoPage() {
     startNewSession()
   }, [startNewSession])
 
-  // FASE 2: Ancho adaptativo fluido "tipo Claude" - sin botones, solo CSS adaptativo
-  // El contenido se centra automáticamente con max-w-4xl
-
   return (
-    /* FASE 1: Layout con scroll corregido - overflow-hidden en padre, scroll en hijo correcto */
     <div className="flex h-full w-full overflow-hidden">
-      {/* CENTRO: Área del Chat - FASE 1: flex-col con overflow-hidden */}
+      {/* CENTRO: Área del Chat */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0 animate-in fade-in duration-500">
-        {/* FASE 2: Contenedor con ancho adaptativo centrado */}
-        <div className="mx-auto w-full max-w-4xl px-4 sm:px-6 md:px-8 py-4 md:py-6">
-          {/* FASE 2: Selectores responsivos sin borders innecesarios */}
-          <div className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-3 mb-4">
-            {/* New Chat Button - FASE 2: Ubicado estratégicamente cerca de selectores */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleNewChat}
-              className="gap-2 border-primary-500/50 hover:bg-primary-500/10 hover:shadow-[0_0_15px_rgba(139,92,246,0.3)] transition-all duration-200"
-            >
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Nuevo Chat</span>
-            </Button>
-            {/* Model Selector - FASE 3: z-index adecuado para dropdowns */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Modelo:</span>
-              <Select value={selectedModelId} onValueChange={setSelectedModelId}>
-                <SelectTrigger className="w-[180px] h-9 transition-all duration-200 hover:shadow-[0_0_12px_rgba(139,92,246,0.2)]">
-                  <SelectValue placeholder="Seleccionar modelo" />
-                </SelectTrigger>
-                <SelectContent className="z-50 max-h-[300px]">
-                  {/* Modelos disponibles primero */}
-                  {AI_MODELS.filter(m => m.isAvailable).map((model) => (
-                    <SelectItem key={model.id} value={model.id}>
-                      <div className="flex flex-col">
-                        <span>{model.name}</span>
-                        <span className="text-xs text-muted-foreground">{model.providerDisplayName} - {model.tier === 'free' ? 'Gratis' : 'Estándar'}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                  {/* Separador para modelos premium deshabilitados */}
-                  {AI_MODELS.filter(m => !m.isAvailable).length > 0 && (
-                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground/50 border-t border-border mt-1 pt-2">
-                      Premium (No disponible)
-                    </div>
-                  )}
-                  {/* Modelos premium deshabilitados */}
-                  {AI_MODELS.filter(m => !m.isAvailable).map((model) => (
-                    <SelectItem key={model.id} value={model.id} disabled className="opacity-50 cursor-not-allowed">
-                      <div className="flex flex-col">
-                        <span className="text-muted-foreground/50">{model.name}</span>
-                        <span className="text-xs text-muted-foreground/50">{model.providerDisplayName} - Premium</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        {/* ═══════════════════════════════════════════════════════════════
+            BARRA DE CONTROL DE CONTEXTO - Estilo Claude mejorado
+        ═══════════════════════════════════════════════════════════════ */}
+        <div className="border-b border-border/50 bg-background/50 backdrop-blur-sm">
+          <div className="mx-auto w-full max-w-4xl px-4 sm:px-6 py-3">
+            <div className="flex flex-wrap justify-center items-center gap-2">
+              {/* New Chat Button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleNewChat}
+                className="gap-2 h-8 text-muted-foreground hover:text-foreground transition-all duration-200"
+              >
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Nuevo Chat</span>
+              </Button>
+              
+              <div className="w-px h-5 bg-border/50 hidden sm:block" />
+              
+              {/* Model Selector */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground hidden md:inline">Modelo:</span>
+                <Select value={selectedModelId} onValueChange={setSelectedModelId}>
+                  <SelectTrigger className="w-[160px] h-8 text-sm bg-secondary/50 border-border/50 hover:border-primary-500/30 transition-all duration-200">
+                    <SelectValue placeholder="Seleccionar modelo" />
+                  </SelectTrigger>
+                  <SelectContent className="z-50 max-h-[300px]">
+                    {AI_MODELS.filter(m => m.isAvailable).map((model) => (
+                      <SelectItem key={model.id} value={model.id}>
+                        <div className="flex flex-col">
+                          <span>{model.name}</span>
+                          <span className="text-xs text-muted-foreground">{model.providerDisplayName}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            {/* Skill Selector - FASE 3: z-index adecuado para dropdowns */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Asistente:</span>
-              <Select value={selectedSkillId} onValueChange={setSelectedSkillId}>
-                <SelectTrigger className="w-[200px] h-9 transition-all duration-200 hover:shadow-[0_0_12px_rgba(139,92,246,0.2)]">
-                  <SelectValue placeholder="Seleccionar asistente" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[400px] z-50">
-                  {Object.entries(skillsByCategory).map(([category, skills]) => (
-                    <div key={category}>
-                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                        {getCategoryLabel(category as SkillConfig['category'])}
-                      </div>
-                      {skills.map((skill) => {
-                        const IconComponent = skillIcons[skill.icon] || Bot
-                        return (
-                          <SelectItem key={skill.id} value={skill.id}>
-                            <div className="flex items-center gap-2">
-                              <IconComponent className="h-4 w-4" />
-                              <div className="flex flex-col">
+              {/* Skill Selector */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground hidden md:inline">Asistente:</span>
+                <Select value={selectedSkillId} onValueChange={setSelectedSkillId}>
+                  <SelectTrigger className="w-[180px] h-8 text-sm bg-secondary/50 border-border/50 hover:border-primary-500/30 transition-all duration-200">
+                    <SelectValue placeholder="Seleccionar asistente" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[400px] z-50">
+                    {Object.entries(skillsByCategory).map(([category, skills]) => (
+                      <div key={category}>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                          {getCategoryLabel(category as SkillConfig['category'])}
+                        </div>
+                        {skills.map((skill) => {
+                          const IconComponent = skillIcons[skill.icon] || Bot
+                          return (
+                            <SelectItem key={skill.id} value={skill.id}>
+                              <div className="flex items-center gap-2">
+                                <IconComponent className="h-4 w-4" />
                                 <span>{skill.name}</span>
-                                <span className="text-xs text-muted-foreground line-clamp-1">
-                                  {skill.description}
-                                </span>
                               </div>
-                            </div>
-                          </SelectItem>
-                        )
-                      })}
-                    </div>
-                  ))}
-                </SelectContent>
-              </Select>
+                            </SelectItem>
+                          )
+                        })}
+                      </div>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="w-px h-5 bg-border/50 hidden sm:block" />
+              
+              {/* Toggle Stats */}
+              <Button
+                variant={showAdvancedStats ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setShowAdvancedStats(!showAdvancedStats)}
+                className={cn(
+                  "h-8 gap-2 transition-all duration-200",
+                  showAdvancedStats && "text-primary-400 bg-primary-500/10"
+                )}
+                title="Mostrar telemetría"
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                <span className="hidden lg:inline">Stats</span>
+              </Button>
+              
+              {/* Toggle Incógnito */}
+              <Button
+                variant={incognitoMode ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setIncognitoMode(!incognitoMode)}
+                className={cn(
+                  "h-8 gap-2 transition-all duration-200",
+                  incognitoMode && "text-primary-400 bg-primary-500/10"
+                )}
+                title={incognitoMode ? "Modo Incógnito activo" : "Activar Incógnito"}
+              >
+                {incognitoMode ? (
+                  <Ghost className="h-4 w-4" />
+                ) : (
+                  <EyeOff className="h-4 w-4" />
+                )}
+                <span className="hidden lg:inline">{incognitoMode ? 'Incógnito' : 'Incógnito'}</span>
+              </Button>
+              
+              {/* Mobile panel toggle */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPanelOpen(true)}
+                className="h-8 xl:hidden"
+              >
+                <PanelRight className="h-4 w-4" />
+              </Button>
             </div>
-            
-            {/* FASE 4: Toggle de Telemetría Avanzada - oculto por defecto */}
-            <Button
-              variant={showAdvancedStats ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setShowAdvancedStats(!showAdvancedStats)}
-              className={cn(
-                "gap-2 transition-all duration-200",
-                showAdvancedStats && "text-primary-400 shadow-[0_0_12px_rgba(139,92,246,0.3)]"
-              )}
-              title={showAdvancedStats ? "Ocultar telemetría avanzada" : "Mostrar telemetría avanzada"}
-              aria-pressed={showAdvancedStats}
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-              <span className="hidden sm:inline">Stats</span>
-            </Button>
-            
-            {/* FASE 4: Botón Modo Incógnito */}
-            <Button
-              variant={incognitoMode ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setIncognitoMode(!incognitoMode)}
-              className={cn(
-                "gap-2 transition-all duration-200",
-                incognitoMode && "text-primary-400 shadow-[0_0_12px_rgba(139,92,246,0.3)]"
-              )}
-              title={incognitoMode ? "Modo Incógnito activo: Los mensajes no se guardarán" : "Activar Modo Incógnito"}
-              aria-pressed={incognitoMode}
-            >
-              <EyeOff className="h-4 w-4" />
-              <span className="hidden sm:inline">{incognitoMode ? 'Incógnito' : 'Incógnito'}</span>
-            </Button>
-            
-            {/* Mobile panel toggle button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setPanelOpen(true)}
-              className="xl:hidden transition-all duration-200 hover:shadow-[0_0_12px_rgba(139,92,246,0.2)]"
-            >
-              <PanelRight className="h-5 w-5" />
-            </Button>
           </div>
-
-          {/* FASE 4: Context Bar solo visible si showAdvancedStats está activo */}
-          {showAdvancedStats && (
-            <div className="mb-4">
-              <ContextBar
-                used={telemetry.contextUsed}
-                limit={telemetry.contextLimit}
-                status={contextStatus}
-              />
-            </div>
-          )}
         </div>
+
+        {/* Context Bar - Solo si showAdvancedStats */}
+        {showAdvancedStats && (
+          <div className="mx-auto w-full max-w-4xl px-4 sm:px-6 py-2">
+            <ContextBar
+              used={telemetry.contextUsed}
+              limit={telemetry.contextLimit}
+              status={contextStatus}
+            />
+          </div>
+        )}
         
-        {/* FASE 1 & 2: Chat Interface con scroll y ancho adaptativo centrado */}
+        {/* Chat Interface */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden">
-          <div className="mx-auto w-full max-w-4xl px-4 sm:px-6 md:px-8 pb-6">
-            <Card className="flex flex-col bg-background-secondary/30 backdrop-blur-sm shadow-none">
+          <div className="mx-auto w-full max-w-4xl h-full">
+            <Card className="flex flex-col h-full bg-transparent border-none shadow-none">
               <ChatInterface
                 messages={messages}
                 isLoading={isStreaming || isSending}
                 onSendMessage={handleSendMessage}
                 onRegenerate={handleRegenerate}
                 onDeleteChat={() => setShowDeleteDialog(true)}
+                selectedModelId={selectedModelId}
+                onModelSelect={setSelectedModelId}
+                incognitoMode={incognitoMode}
               />
             </Card>
           </div>
         </div>
         
-        {/* Error Display - FASE 1 FIX: posicionamiento absoluto para no afectar scroll */}
+        {/* Error Display */}
         {error && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive max-w-md">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive max-w-md animate-slide-up">
             <p className="text-sm font-medium">Error: {error}</p>
           </div>
         )}
 
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <AlertDialogContent>
+          <AlertDialogContent className="bg-popover/95 backdrop-blur-xl border-border/50">
             <AlertDialogHeader>
               <AlertDialogTitle>¿Eliminar conversación?</AlertDialogTitle>
               <AlertDialogDescription>
@@ -457,19 +426,19 @@ export default function ArenaTextoPage() {
         </AlertDialog>
       </div>
 
-      {/* FASE 4: Panel de Telemetría solo visible si showAdvancedStats está activo */}
+      {/* Panel de Telemetría - Solo si showAdvancedStats */}
       {showAdvancedStats && (
-        <div className="hidden xl:flex w-80 shrink-0 bg-background-secondary/30 overflow-y-auto">
+        <div className="hidden xl:flex w-80 shrink-0 border-l border-border/50 bg-background-secondary/30 overflow-y-auto">
           <TelemetryPanel />
         </div>
       )}
 
-      {/* Mobile Right Panel (Sheet) - FASE 3: Telemetría en móvil */}
+      {/* Mobile Right Panel */}
       <Sheet open={panelOpen} onOpenChange={setPanelOpen}>
-        <SheetContent side="right" className="w-80 p-0 max-w-[85vw]">
+        <SheetContent side="right" className="w-80 p-0 max-w-[85vw] bg-popover/95 backdrop-blur-xl">
           <SheetHeader className="sr-only">
             <SheetTitle>Panel de telemetría</SheetTitle>
-            <SheetDescription>Información de uso y estadísticas de la sesión actual</SheetDescription>
+            <SheetDescription>Información de uso y estadísticas</SheetDescription>
           </SheetHeader>
           <TelemetryPanel />
         </SheetContent>

@@ -2,101 +2,299 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   AETHER DESIGN SYSTEM - Fusionando identidad Aether con elegancia Claude
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Import Google Fonts - Serif elegante para títulos, Sans para UI */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:wght@400;500;600;700&display=swap');
+
 @layer base {
   :root {
-    --background: 270 50% 4%;
-    --foreground: 0 0% 100%;
-    --card: 270 50% 6%;
-    --card-foreground: 0 0% 100%;
-    --popover: 270 50% 6%;
-    --popover-foreground: 0 0% 100%;
-    --primary: 263 70% 50%;
+    /* ═══════════════════════════════════════════════════════════════════════
+       PALETA DE COLORES PRINCIPAL
+       Background Principal: Gris carbón/púrpura extremadamente oscuro
+       Background Paneles: Ligeramente más contrastante para profundidad
+       ═══════════════════════════════════════════════════════════════════════ */
+    
+    /* Main Arena Background - #161618 equivalente */
+    --background: 270 30% 5%;
+    --foreground: 0 0% 95%;
+    
+    /* Panel backgrounds - #110D17 equivalente, más oscuro */
+    --background-secondary: 270 50% 4%;
+    
+    /* Cards and elevated surfaces */
+    --card: 270 40% 7%;
+    --card-foreground: 0 0% 95%;
+    
+    /* Popovers and dropdowns */
+    --popover: 270 50% 8%;
+    --popover-foreground: 0 0% 95%;
+    
+    /* Primary accent - Púrpura neón/violeta #9D4EDD */
+    --primary: 271 67% 55%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 270 50% 10%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 270 50% 12%;
-    --muted-foreground: 0 0% 70%;
-    --accent: 263 70% 50%;
+    
+    /* Secondary surfaces */
+    --secondary: 270 40% 12%;
+    --secondary-foreground: 0 0% 95%;
+    
+    /* Muted text and surfaces */
+    --muted: 270 30% 15%;
+    --muted-foreground: 0 0% 65%;
+    
+    /* Accent color */
+    --accent: 271 67% 55%;
     --accent-foreground: 0 0% 100%;
+    
+    /* Destructive/error states */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 270 50% 15%;
-    --input: 270 50% 15%;
-    --ring: 263 70% 50%;
-    --radius: 0.75rem;
+    
+    /* Borders and inputs - Púrpura/Gris muy tenue */
+    --border: 270 30% 18%;
+    --input: 270 30% 18%;
+    --ring: 271 67% 55%;
+    
+    /* Border radius - más redondeado estilo Claude */
+    --radius: 0.875rem;
+    
+    /* ═══════════════════════════════════════════════════════════════════════
+       COLORES ESPECÍFICOS AETHER
+       ═══════════════════════════════════════════════════════════════════════ */
+    
+    /* Violet neón para acentos especiales */
+    --violet-neon: 271 67% 55%;
+    --violet-dark: 271 60% 35%;
+    
+    /* Success, Warning, Error */
+    --success: 142 76% 36%;
+    --warning: 45 93% 47%;
+    --error: 0 84% 60%;
   }
 
   * {
     @apply border-border;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
+    font-optical-sizing: auto;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     TIPOGRAFÍA - Sistema de fuentes
+     ═══════════════════════════════════════════════════════════════════════ */
+  
+  /* Títulos elegantes con Serif - Estilo Claude */
+  .font-serif-elegant {
+    font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  
+  /* UI limpia con Sans-serif */
+  .font-ui {
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  
+  /* Código con Monospace */
+  .font-mono {
+    font-family: 'JetBrains Mono', 'Fira Code', Consolas, Monaco, 'Andale Mono', monospace;
   }
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-}
-
-/* Custom scrollbar */
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCROLLBAR PERSONALIZADO - Estilo Aether mejorado
+   ═══════════════════════════════════════════════════════════════════════════ */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: hsl(var(--muted));
-  border-radius: 4px;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--primary) / 0.3);
-  border-radius: 4px;
+  background: hsl(var(--primary) / 0.2);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--primary) / 0.5);
+  background: hsl(var(--primary) / 0.4);
 }
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--primary) / 0.2) transparent;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   EFECTOS VISUALES - Glassmorphism, Glow, Gradientes
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 /* Glassmorphism effect */
 .glass {
-  background: rgba(15, 15, 26, 0.8);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(17, 13, 23, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
-/* Gradient text */
+.glass-subtle {
+  background: rgba(22, 22, 24, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Gradient text - Púrpura neón */
 .gradient-text {
-  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 50%, #7c3aed 100%);
+  background: linear-gradient(135deg, #9D4EDD 0%, #C084FC 50%, #9D4EDD 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* Glow effect */
+.gradient-text-subtle {
+  background: linear-gradient(135deg, #7B2CBF 0%, #9D4EDD 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glow effects - Púrpura neón */
 .glow {
-  box-shadow: 0 0 20px rgba(124, 58, 237, 0.3);
+  box-shadow: 0 0 25px rgba(157, 78, 221, 0.35);
 }
 
 .glow-sm {
-  box-shadow: 0 0 10px rgba(124, 58, 237, 0.2);
+  box-shadow: 0 0 12px rgba(157, 78, 221, 0.25);
 }
+
+.glow-focus {
+  box-shadow: 0 0 0 2px rgba(157, 78, 221, 0.3), 0 0 20px rgba(157, 78, 221, 0.2);
+}
+
+/* Glow on hover */
+.hover-glow {
+  transition: box-shadow 0.2s ease-in-out;
+}
+
+.hover-glow:hover {
+  box-shadow: 0 0 20px rgba(157, 78, 221, 0.3);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ANIMACIONES
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 /* Shimmer animation for loading states */
 .shimmer {
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0.08),
     transparent
   );
   background-size: 200% 100%;
   animation: shimmer 2s linear infinite;
 }
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Slide up animation */
+@keyframes slideUp {
+  from { 
+    opacity: 0; 
+    transform: translateY(10px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+/* Scale in animation */
+@keyframes scaleIn {
+  from { 
+    opacity: 0; 
+    transform: scale(0.95); 
+  }
+  to { 
+    opacity: 1; 
+    transform: scale(1); 
+  }
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out;
+}
+
+/* Pulse glow animation */
+@keyframes pulseGlow {
+  0%, 100% { 
+    box-shadow: 0 0 15px rgba(157, 78, 221, 0.3); 
+  }
+  50% { 
+    box-shadow: 0 0 25px rgba(157, 78, 221, 0.5); 
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+
+/* Typing indicator animation */
+@keyframes typing {
+  0%, 60%, 100% { 
+    transform: translateY(0); 
+    opacity: 0.4;
+  }
+  30% { 
+    transform: translateY(-4px); 
+    opacity: 1;
+  }
+}
+
+.typing-dot {
+  animation: typing 1.4s ease-in-out infinite;
+}
+
+.typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   COMPONENTES ESPECIALES
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 /* Context bar colors */
 .context-normal {
@@ -109,4 +307,202 @@
 
 .context-critical {
   @apply bg-error;
+}
+
+/* Input box estilo Claude/Aether */
+.input-box {
+  @apply w-full rounded-2xl bg-secondary/50 border border-border/50 px-4 py-3;
+  @apply transition-all duration-200 ease-in-out;
+  @apply focus:outline-none focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20;
+  @apply placeholder:text-muted-foreground;
+}
+
+.input-box:focus {
+  box-shadow: 0 0 0 2px rgba(157, 78, 221, 0.15), 0 0 20px rgba(157, 78, 221, 0.1);
+}
+
+/* Pill buttons - Quick actions */
+.pill-button {
+  @apply inline-flex items-center gap-2 px-4 py-2 rounded-full;
+  @apply text-sm font-medium text-muted-foreground;
+  @apply bg-transparent border border-border/50;
+  @apply transition-all duration-200 ease-in-out;
+  @apply hover:bg-secondary hover:text-foreground hover:border-primary-500/30;
+}
+
+.pill-button:hover {
+  box-shadow: 0 0 15px rgba(157, 78, 221, 0.15);
+}
+
+/* Card hover effect */
+.card-hover {
+  @apply transition-all duration-200 ease-in-out;
+}
+
+.card-hover:hover {
+  @apply bg-secondary/50;
+  box-shadow: 0 0 20px rgba(157, 78, 221, 0.1);
+}
+
+/* Active nav item */
+.nav-item-active {
+  @apply bg-primary-500/15 text-primary-400 border-l-2 border-primary-500;
+  box-shadow: inset 0 0 20px rgba(157, 78, 221, 0.1);
+}
+
+/* Dropdown menu styling */
+.dropdown-menu {
+  @apply bg-popover border border-border/50 rounded-xl shadow-xl;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* Model selector card */
+.model-card {
+  @apply p-3 rounded-xl bg-secondary/30 border border-border/30;
+  @apply transition-all duration-200 ease-in-out cursor-pointer;
+}
+
+.model-card:hover {
+  @apply bg-secondary/50 border-primary-500/30;
+  box-shadow: 0 0 15px rgba(157, 78, 221, 0.15);
+}
+
+.model-card-selected {
+  @apply bg-primary-500/10 border-primary-500/50;
+  box-shadow: 0 0 20px rgba(157, 78, 221, 0.2);
+}
+
+/* Toggle switch */
+.toggle-switch {
+  @apply relative inline-flex h-6 w-11 items-center rounded-full;
+  @apply bg-secondary transition-colors duration-200 ease-in-out;
+}
+
+.toggle-switch-active {
+  @apply bg-primary-600;
+}
+
+.toggle-switch-thumb {
+  @apply inline-block h-4 w-4 transform rounded-full bg-white shadow-lg;
+  @apply transition-transform duration-200 ease-in-out;
+}
+
+.toggle-switch-active .toggle-switch-thumb {
+  @apply translate-x-6;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   UTILIDADES ADICIONALES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  /* Focus ring personalizado */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:ring-offset-0;
+  }
+  
+  /* Truncate multiline */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  /* Gradient border */
+  .gradient-border {
+    position: relative;
+  }
+  
+  .gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(157, 78, 221, 0.3), rgba(192, 132, 252, 0.1));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ESTADOS ESPECIALES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Incognito mode */
+.incognito-mode {
+  @apply relative;
+}
+
+.incognito-mode::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(157, 78, 221, 0.05), transparent);
+  pointer-events: none;
+}
+
+/* Loading skeleton */
+.skeleton {
+  @apply bg-secondary/50 rounded animate-pulse;
+}
+
+/* Badge styles */
+.badge-premium {
+  @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+  @apply bg-gradient-to-r from-amber-500/20 to-yellow-500/20 text-amber-400;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.badge-new {
+  @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+  @apply bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-400;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.badge-beta {
+  @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+  @apply bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-400;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE HELPERS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Safe area for mobile */
+@supports (padding: max(0px)) {
+  .safe-area-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  
+  .safe-area-top {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
 }
