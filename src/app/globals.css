@@ -12,37 +12,38 @@
 @layer base {
   :root {
     /* ═══════════════════════════════════════════════════════════════════════
-       PALETA DE COLORES PRINCIPAL
-       Background Principal: Gris carbón/púrpura extremadamente oscuro
-       Background Paneles: Ligeramente más contrastante para profundidad
+       PALETA DE COLORES PRINCIPAL - AETHER 2.0
+       Background Principal: Ultra oscuro #0D0D12
+       Background Paneles: Ligeramente más claro #161618
+       Bordes: Translúcidos púrpuras rgba(157, 78, 221, 0.15)
        ═══════════════════════════════════════════════════════════════════════ */
     
-    /* Main Arena Background - #161618 equivalente */
-    --background: 270 30% 5%;
+    /* Main Arena Background - Ultra oscuro #0D0D12 */
+    --background: 250 25% 5%;
     --foreground: 0 0% 95%;
     
-    /* Panel backgrounds - #110D17 equivalente, más oscuro */
-    --background-secondary: 270 50% 4%;
+    /* Panel backgrounds - #161618, ligeramente más claro */
+    --background-secondary: 250 20% 9%;
     
-    /* Cards and elevated surfaces */
-    --card: 270 40% 7%;
+    /* Cards and elevated surfaces - #1A1A1F */
+    --card: 250 20% 11%;
     --card-foreground: 0 0% 95%;
     
-    /* Popovers and dropdowns */
-    --popover: 270 50% 8%;
+    /* Popovers and dropdowns - #1E1E24 */
+    --popover: 250 20% 13%;
     --popover-foreground: 0 0% 95%;
     
     /* Primary accent - Púrpura neón/violeta #9D4EDD */
     --primary: 271 67% 55%;
     --primary-foreground: 0 0% 100%;
     
-    /* Secondary surfaces */
-    --secondary: 270 40% 12%;
+    /* Secondary surfaces - #1F1F26 */
+    --secondary: 250 15% 14%;
     --secondary-foreground: 0 0% 95%;
     
     /* Muted text and surfaces */
-    --muted: 270 30% 15%;
-    --muted-foreground: 0 0% 65%;
+    --muted: 250 15% 18%;
+    --muted-foreground: 0 0% 55%;
     
     /* Accent color */
     --accent: 271 67% 55%;
@@ -52,21 +53,24 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
     
-    /* Borders and inputs - Púrpura/Gris muy tenue */
-    --border: 270 30% 18%;
-    --input: 270 30% 18%;
+    /* Borders and inputs - Púrpura translúcido */
+    --border: 271 50% 25%;
+    --input: 271 30% 18%;
     --ring: 271 67% 55%;
     
     /* Border radius - más redondeado estilo Claude */
     --radius: 0.875rem;
     
     /* ═══════════════════════════════════════════════════════════════════════
-       COLORES ESPECÍFICOS AETHER
+       COLORES ESPECÍFICOS AETHER 2.0
        ═══════════════════════════════════════════════════════════════════════ */
     
     /* Violet neón para acentos especiales */
     --violet-neon: 271 67% 55%;
     --violet-dark: 271 60% 35%;
+    
+    /* Border translúcido púrpura */
+    --border-purple-glow: 271 67% 55%;
     
     /* Success, Warning, Error */
     --success: 142 76% 36%;

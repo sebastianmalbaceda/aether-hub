@@ -1,12 +1,10 @@
 'use client'
 
-import Link from 'next/link'
 import {
   Bell,
   Zap,
   Sparkles,
   Menu,
-  Crown,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -14,6 +12,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { cn } from '@/lib/utils'
 import { useUserStore } from '@/stores/user-store'
 
 interface HeaderProps {
@@ -34,48 +33,51 @@ export function Header({ onMenuClick }: HeaderProps) {
   }
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b border-border/50 bg-background/80 backdrop-blur-xl px-4 lg:px-6 transition-all duration-300">
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-primary-500/10 bg-background/80 backdrop-blur-xl px-4 lg:px-6 transition-all duration-300">
       {/* ═══════════════════════════════════════════════════════════════
-          IZQUIERDA: Solo botón hamburguesa (móvil)
+          IZQUIERDA: Logo/Breadcrumbs (minimalista)
       ═══════════════════════════════════════════════════════════════ */}
-      <div className="flex items-center">
+      <div className="flex items-center gap-3">
         {/* Mobile menu button */}
         <Button
           variant="ghost"
           size="icon"
           onClick={onMenuClick}
-          className="lg:hidden h-9 w-9 transition-all duration-200 hover:bg-secondary hover:text-primary-400"
+          className="lg:hidden h-9 w-9 transition-all duration-200 hover:bg-primary-500/5 hover:text-primary-400"
         >
           <Menu className="h-5 w-5" />
         </Button>
+
+        {/* Logo para móvil (desktop lo tiene en sidebar) */}
+        <div className="flex lg:hidden items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary-500 to-primary-700">
+            <Zap className="h-4 w-4 text-white" />
+          </div>
+          <span className="text-lg font-bold gradient-text">Aether</span>
+        </div>
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════
-          CENTRO: CTA "Mejora tu plan" 
+          CENTRO: Plan Gratuito · Actualizar
       ═══════════════════════════════════════════════════════════════ */}
-      <div className="flex-1 flex justify-center">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          asChild
-          className="hidden sm:inline-flex h-8 gap-2 border-primary-500/30 bg-primary-500/5 hover:bg-primary-500/15 hover:border-primary-500/50 text-primary-300 hover:text-primary-200 transition-all duration-200"
-        >
-          <Link href="/pricing">
-            <Crown className="h-3.5 w-3.5" />
-            <span className="text-sm font-medium">Plan Gratuito · Actualizar</span>
-          </Link>
-        </Button>
+      <div className="absolute left-1/2 -translate-x-1/2 hidden sm:flex">
+        <button className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-primary-500/10 to-primary-600/10 border border-primary-500/20 text-sm font-medium text-primary-300 hover:from-primary-500/20 hover:to-primary-600/20 hover:border-primary-500/40 transition-all duration-200">
+          <Sparkles className="h-4 w-4" />
+          <span>Plan Gratuito</span>
+          <span className="text-primary-400">·</span>
+          <span className="text-primary-200 hover:text-white">Actualizar</span>
+        </button>
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════
           DERECHA: Puntos + Notificaciones
       ═══════════════════════════════════════════════════════════════ */}
       <div className="flex items-center gap-2 md:gap-3 justify-end">
-        {/* Points indicator - Diseño mejorado */}
-        <div className="flex items-center gap-2 rounded-full bg-primary-500/10 border border-primary-500/20 px-3 py-1.5 transition-all duration-200 hover:bg-primary-500/15 hover:border-primary-500/30 cursor-default">
+        {/* Points indicator */}
+        <button className="flex items-center gap-1.5 rounded-full bg-secondary/50 border border-primary-500/20 px-3 py-1.5 transition-all duration-200 hover:bg-secondary hover:border-primary-500/30 cursor-pointer">
           <Zap className="h-3.5 w-3.5 text-primary-400" />
           <span className="text-sm font-medium text-primary-300">{formatPoints(pointsBalance)} pts</span>
-        </div>
+        </button>
 
         {/* Notifications */}
         <Popover>
@@ -83,7 +85,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             <Button 
               variant="ghost" 
               size="icon" 
-              className="relative h-9 w-9 transition-all duration-200 hover:bg-secondary hover:text-primary-400"
+              className="relative h-9 w-9 transition-all duration-200 hover:bg-primary-500/5 hover:text-primary-400"
             >
               <Bell className="h-5 w-5" />
               <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-primary-600 text-[10px] font-bold text-white flex items-center justify-center border-2 border-background">
@@ -91,8 +93,8 @@ export function Header({ onMenuClick }: HeaderProps) {
               </span>
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-80 p-0 bg-popover/95 backdrop-blur-xl border-border/50">
-            <div className="p-4 border-b border-border/50">
+          <PopoverContent align="end" className="w-80 p-0 bg-popover/95 backdrop-blur-xl border-primary-500/20">
+            <div className="p-4 border-b border-primary-500/10">
               <h4 className="font-semibold text-sm">Notificaciones</h4>
               <p className="text-xs text-muted-foreground mt-0.5">Tus actualizaciones y alertas</p>
             </div>

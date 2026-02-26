@@ -2,17 +2,15 @@
 
 import { useState, useRef, useCallback } from 'react'
 import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { ChatInterface } from '@/components/chat/chat-interface'
 import { ContextBar } from '@/components/telemetry/context-bar'
 import { TelemetryPanel } from '@/components/telemetry/telemetry-panel'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
-import { Plus, Bot, Zap, Book, Pen, Megaphone, GraduationCap, Code, GitPullRequest, Bug as BugIcon, BarChart, Search, Lightbulb, Layout, School, Languages, PanelRight, EyeOff, SlidersHorizontal, Ghost } from 'lucide-react'
+import { PanelRight, SlidersHorizontal } from 'lucide-react'
 import { useChatStore, selectFormattedContextUsage, selectContextStatus } from '@/stores/chat-store'
 import { useUserStore } from '@/stores/user-store'
-import { estimateTokens, AI_MODELS, SKILLS, getCategoryLabel } from '@/config'
+import { estimateTokens } from '@/config'
 import { cn } from '@/lib/utils'
-import type { SkillConfig } from '@/config'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,46 +21,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-
-// Map skill icons
-const skillIcons: Record<string, React.ComponentType<{ className?: string }>> = {
-  Bot,
-  Zap,
-  BookOpen: Book,
-  Pen,
-  Megaphone,
-  GraduationCap,
-  Code,
-  GitPullRequest,
-  Bug: BugIcon,
-  BarChart,
-  Search,
-  Lightbulb,
-  Book,
-  Layout,
-  School,
-  Languages,
-}
+import { Button } from '@/components/ui/button'
 
 export default function ArenaTextoPage() {
   // Chat store
   const messages = useChatStore((state) => state.messages)
   const selectedModelId = useChatStore((state) => state.selectedModelId)
-  const selectedSkillId = useChatStore((state) => state.selectedSkillId)
   const telemetry = useChatStore((state) => state.telemetry)
   const isStreaming = useChatStore((state) => state.isStreaming)
   const isSending = useChatStore((state) => state.isSending)
   const error = useChatStore((state) => state.error)
   
   const setSelectedModelId = useChatStore((state) => state.setSelectedModelId)
-  const setSelectedSkillId = useChatStore((state) => state.setSelectedSkillId)
   const addMessage = useChatStore((state) => state.addMessage)
   const updateLastMessage = useChatStore((state) => state.updateLastMessage)
   const setStreaming = useChatStore((state) => state.setStreaming)
@@ -70,9 +40,6 @@ export default function ArenaTextoPage() {
   const setError = useChatStore((state) => state.setError)
   const updateTelemetryAfterResponse = useChatStore((state) => state.updateTelemetryAfterResponse)
   const clearSession = useChatStore((state) => state.clearSession)
-  const startNewSession = useChatStore((state) => state.startNewSession)
-  const getSelectedModel = useChatStore((state) => state.getSelectedModel)
-  const getSelectedSkill = useChatStore((state) => state.getSelectedSkill)
   
   // Derived values
   const formattedContextUsage = useChatStore(selectFormattedContextUsage)
@@ -80,8 +47,6 @@ export default function ArenaTextoPage() {
   
   // User store
   const pointsBalance = useUserStore((state) => state.pointsBalance)
-  const dailyUsage = useUserStore((state) => state.dailyUsage)
-  const dailyLimit = useUserStore((state) => state.dailyLimit)
   const deductPoints = useUserStore((state) => state.deductPoints)
   
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -93,14 +58,6 @@ export default function ArenaTextoPage() {
   
   // Estado para modo incógnito
   const [incognitoMode, setIncognitoMode] = useState(false)
-
-  // Group skills by category
-  const skillsByCategory = SKILLS.reduce((acc, skill) => {
-    const category = skill.category
-    if (!acc[category]) acc[category] = []
-    acc[category].push(skill)
-    return acc
-  }, {} as Record<string, SkillConfig[]>)
 
   // Send message to API
   const handleSendMessage = useCallback(async (content: string) => {
@@ -148,228 +105,110 @@ export default function ArenaTextoPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: apiMessages,
-          modelId: selectedModelId,
-          skillId: selectedSkillId,
+          model: selectedModelId,
         }),
         signal: abortControllerRef.current.signal,
       })
       
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to get response')
+        throw new Error('Error en la respuesta del servidor')
       }
       
-      setSending(false)
-      setStreaming(true)
-      
       const reader = response.body?.getReader()
-      const decoder = new TextDecoder()
-      let fullContent = ''
-      let telemetryData: Record<string, unknown> | null = null
+      if (!reader) throw new Error('No se pudo leer la respuesta')
       
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          
-          const chunk = decoder.decode(value, { stream: true })
-          const lines = chunk.split('\n')
-          
-          for (const line of lines) {
-            if (line.startsWith('0:"')) {
-              try {
-                const text = line.slice(3, -1)
-                  .replace(/\\n/g, '\n')
-                  .replace(/\\"/g, '"')
-                  .replace(/\\\\/g, '\\')
-                fullContent += text
+      setStreaming(true)
+      setSending(false)
+      
+      let fullContent = ''
+      let totalTokens = 0
+      
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        
+        const chunk = new TextDecoder().decode(value)
+        const lines = chunk.split('\n').filter(line => line.trim())
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6)
+            if (data === '[DONE]') continue
+            
+            try {
+              const parsed = JSON.parse(data)
+              const content = parsed.choices?.[0]?.delta?.content || ''
+              
+              if (content) {
+                fullContent += content
                 updateLastMessage(fullContent)
-              } catch {
-                // Ignore parse errors
               }
-            } else if (line.startsWith('e:')) {
-              try {
-                telemetryData = JSON.parse(line.slice(2))
-              } catch {
-                // Ignore parse errors
+              
+              if (parsed.usage) {
+                totalTokens = parsed.usage.total_tokens || 0
               }
+            } catch {
+              // Ignore parse errors for incomplete JSON
             }
           }
         }
       }
       
-      setStreaming(false)
+      // Calculate points cost (simplified)
+      const pointsCost = Math.ceil(totalTokens * 0.001)
       
-      if (telemetryData) {
-        const { promptTokens, completionTokens, totalCost } = telemetryData as {
-          promptTokens: number
-          completionTokens: number
-          totalCost: number
-        }
-        updateTelemetryAfterResponse(promptTokens, completionTokens, totalCost)
-        deductPoints(totalCost)
+      // Update telemetry (promptTokens, completionTokens, pointsCost)
+      const promptTokens = estimateTokens(content)
+      const completionTokens = totalTokens - promptTokens
+      updateTelemetryAfterResponse(promptTokens, completionTokens > 0 ? completionTokens : totalTokens, pointsCost)
+      
+      // Deduct points
+      if (pointsCost > 0) {
+        deductPoints(pointsCost)
       }
       
     } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.log('Request aborted')
+      } else {
+        setError(err instanceof Error ? err.message : 'Error desconocido')
+      }
+    } finally {
       setStreaming(false)
       setSending(false)
-      
-      if (err instanceof Error && err.name === 'AbortError') {
-        return
-      }
-      
-      setError(err instanceof Error ? err.message : 'An error occurred')
     }
-  }, [messages, selectedModelId, selectedSkillId, isStreaming, isSending, addMessage, updateLastMessage, setStreaming, setSending, setError, updateTelemetryAfterResponse, deductPoints])
+  }, [messages, selectedModelId, isStreaming, isSending, addMessage, updateLastMessage, setStreaming, setSending, setError, updateTelemetryAfterResponse, deductPoints])
 
   // Regenerate last response
   const handleRegenerate = useCallback(() => {
-    if (messages.length < 2 || isStreaming || isSending) return
+    if (messages.length < 2) return
     
-    const lastUserMessage = [...messages].reverse().find(m => m.role === 'USER')
-    if (!lastUserMessage) return
-    
-    const newMessages = messages.slice(0, -1)
-    useChatStore.setState({ messages: newMessages })
-    handleSendMessage(lastUserMessage.content)
-  }, [messages, isStreaming, isSending, handleSendMessage])
+    // Remove last assistant message
+    const lastUserMessage = messages.filter(m => m.role === 'USER').pop()
+    if (lastUserMessage) {
+      // Re-send the last user message
+      handleSendMessage(lastUserMessage.content)
+    }
+  }, [messages, handleSendMessage])
 
-  // Delete chat with confirmation
+  // Delete chat
   const handleDeleteChat = useCallback(() => {
     clearSession()
     setShowDeleteDialog(false)
   }, [clearSession])
 
-  // Start new chat
+  // New chat
   const handleNewChat = useCallback(() => {
-    startNewSession()
-  }, [startNewSession])
+    clearSession()
+  }, [clearSession])
 
   return (
     <div className="flex h-full w-full overflow-hidden">
       {/* CENTRO: Área del Chat */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0 animate-in fade-in duration-500">
-        {/* ═══════════════════════════════════════════════════════════════
-            BARRA DE CONTROL DE CONTEXTO - Estilo Claude mejorado
-        ═══════════════════════════════════════════════════════════════ */}
-        <div className="border-b border-border/50 bg-background/50 backdrop-blur-sm">
-          <div className="mx-auto w-full max-w-4xl px-4 sm:px-6 py-3">
-            <div className="flex flex-wrap justify-center items-center gap-2">
-              {/* New Chat Button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleNewChat}
-                className="gap-2 h-8 text-muted-foreground hover:text-foreground transition-all duration-200"
-              >
-                <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">Nuevo Chat</span>
-              </Button>
-              
-              <div className="w-px h-5 bg-border/50 hidden sm:block" />
-              
-              {/* Model Selector */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground hidden md:inline">Modelo:</span>
-                <Select value={selectedModelId} onValueChange={setSelectedModelId}>
-                  <SelectTrigger className="w-[160px] h-8 text-sm bg-secondary/50 border-border/50 hover:border-primary-500/30 transition-all duration-200">
-                    <SelectValue placeholder="Seleccionar modelo" />
-                  </SelectTrigger>
-                  <SelectContent className="z-50 max-h-[300px]">
-                    {AI_MODELS.filter(m => m.isAvailable).map((model) => (
-                      <SelectItem key={model.id} value={model.id}>
-                        <div className="flex flex-col">
-                          <span>{model.name}</span>
-                          <span className="text-xs text-muted-foreground">{model.providerDisplayName}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Skill Selector */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground hidden md:inline">Asistente:</span>
-                <Select value={selectedSkillId} onValueChange={setSelectedSkillId}>
-                  <SelectTrigger className="w-[180px] h-8 text-sm bg-secondary/50 border-border/50 hover:border-primary-500/30 transition-all duration-200">
-                    <SelectValue placeholder="Seleccionar asistente" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[400px] z-50">
-                    {Object.entries(skillsByCategory).map(([category, skills]) => (
-                      <div key={category}>
-                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                          {getCategoryLabel(category as SkillConfig['category'])}
-                        </div>
-                        {skills.map((skill) => {
-                          const IconComponent = skillIcons[skill.icon] || Bot
-                          return (
-                            <SelectItem key={skill.id} value={skill.id}>
-                              <div className="flex items-center gap-2">
-                                <IconComponent className="h-4 w-4" />
-                                <span>{skill.name}</span>
-                              </div>
-                            </SelectItem>
-                          )
-                        })}
-                      </div>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="w-px h-5 bg-border/50 hidden sm:block" />
-              
-              {/* Toggle Stats */}
-              <Button
-                variant={showAdvancedStats ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setShowAdvancedStats(!showAdvancedStats)}
-                className={cn(
-                  "h-8 gap-2 transition-all duration-200",
-                  showAdvancedStats && "text-primary-400 bg-primary-500/10"
-                )}
-                title="Mostrar telemetría"
-              >
-                <SlidersHorizontal className="h-4 w-4" />
-                <span className="hidden lg:inline">Stats</span>
-              </Button>
-              
-              {/* Toggle Incógnito */}
-              <Button
-                variant={incognitoMode ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setIncognitoMode(!incognitoMode)}
-                className={cn(
-                  "h-8 gap-2 transition-all duration-200",
-                  incognitoMode && "text-primary-400 bg-primary-500/10"
-                )}
-                title={incognitoMode ? "Modo Incógnito activo" : "Activar Incógnito"}
-              >
-                {incognitoMode ? (
-                  <Ghost className="h-4 w-4" />
-                ) : (
-                  <EyeOff className="h-4 w-4" />
-                )}
-                <span className="hidden lg:inline">{incognitoMode ? 'Incógnito' : 'Incógnito'}</span>
-              </Button>
-              
-              {/* Mobile panel toggle */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setPanelOpen(true)}
-                className="h-8 xl:hidden"
-              >
-                <PanelRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-
         {/* Context Bar - Solo si showAdvancedStats */}
         {showAdvancedStats && (
-          <div className="mx-auto w-full max-w-4xl px-4 sm:px-6 py-2">
+          <div className="mx-auto w-full max-w-4xl px-4 sm:px-6 py-2 border-b border-border/50 bg-background/50 backdrop-blur-sm">
             <ContextBar
               used={telemetry.contextUsed}
               limit={telemetry.contextLimit}
@@ -377,6 +216,33 @@ export default function ArenaTextoPage() {
             />
           </div>
         )}
+        
+        {/* Toggle Stats Button - Floating */}
+        <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+          <Button
+            variant={showAdvancedStats ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setShowAdvancedStats(!showAdvancedStats)}
+            className={cn(
+              "h-8 gap-2 transition-all duration-200 bg-background/80 backdrop-blur-sm",
+              showAdvancedStats && "text-primary-400 bg-primary-500/10"
+            )}
+            title="Mostrar telemetría"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            <span className="hidden sm:inline">Stats</span>
+          </Button>
+          
+          {/* Mobile panel toggle */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setPanelOpen(true)}
+            className="h-8 xl:hidden bg-background/80 backdrop-blur-sm"
+          >
+            <PanelRight className="h-4 w-4" />
+          </Button>
+        </div>
         
         {/* Chat Interface */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden">
@@ -391,6 +257,7 @@ export default function ArenaTextoPage() {
                 selectedModelId={selectedModelId}
                 onModelSelect={setSelectedModelId}
                 incognitoMode={incognitoMode}
+                onIncognitoChange={setIncognitoMode}
               />
             </Card>
           </div>
