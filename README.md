@@ -187,7 +187,7 @@ npm run start
 
 ## 📄 Licencia
 
-Este proyecto está bajo la Licencia MIT. Ver [LICENSE](LICENSE) para más detalles.
+Este proyecto está bajo la Licencia All Rights Reserved. Ver [LICENSE](LICENSE) para más detalles.
 
 ## 🙏 Agradecimientos
 
