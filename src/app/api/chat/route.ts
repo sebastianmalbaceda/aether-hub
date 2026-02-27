@@ -1,3 +1,11 @@
+// ============================================
+// Universal AI Chat Router - Aether Hub
+// ============================================
+// Router multi-modelo definitivo:
+// - Free Tier (Groq) 100% funcional
+// - Premium Tier preparado para plug-and-play
+// ============================================
+
 import { NextRequest } from 'next/server'
 import { createOpenAI } from '@ai-sdk/openai'
 import { createAnthropic } from '@ai-sdk/anthropic'
@@ -13,47 +21,81 @@ export const dynamic = 'force-dynamic'
 // Puntos de bienvenida para nuevos usuarios
 const WELCOME_BONUS_POINTS = 10000
 
-// Initialize AI clients
-const openai = createOpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+// ============================================
+// Inicialización de Clientes AI (Plug-and-Play)
+// ============================================
+// Cada cliente se inicializa con su API key del .env
+// Si la key no existe, el cliente se crea con string vacío
+// y fallará solo cuando se intente usar ese proveedor
 
-const anthropic = createAnthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-})
-
-const google = createGoogleGenerativeAI({
-  apiKey: process.env.GOOGLE_AI_API_KEY || process.env.GOOGLE_API_KEY,
-})
-
-// Groq uses OpenAI-compatible API
+// 1. Cliente Groq (Free Tier Activo)
 const groq = createOpenAI({
   baseURL: 'https://api.groq.com/openai/v1',
   apiKey: process.env.GROQ_API_KEY,
 })
 
-// Get the appropriate model instance for the AI SDK
+// 2. Cliente OpenAI (Premium - requiere API key propia)
+const openai = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY || '',
+})
+
+// 3. Cliente Anthropic (Premium - requiere API key propia)
+const anthropic = createAnthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY || '',
+})
+
+// 4. Cliente Google/Gemini (Premium - requiere API key propia)
+const google = createGoogleGenerativeAI({
+  apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || process.env.GOOGLE_API_KEY || '',
+})
+
+// ============================================
+// Función de Enrutamiento de Modelos
+// ============================================
+// Devuelve la instancia del modelo correcto según el proveedor
+
 function getModelInstance(modelId: string, provider: string) {
   switch (provider) {
     case 'OPENAI':
+      if (!process.env.OPENAI_API_KEY) {
+        throw new Error('API Key de OpenAI no configurada. Añade OPENAI_API_KEY a tu archivo .env')
+      }
       return openai(modelId)
+    
     case 'ANTHROPIC':
+      if (!process.env.ANTHROPIC_API_KEY) {
+        throw new Error('API Key de Anthropic no configurada. Añade ANTHROPIC_API_KEY a tu archivo .env')
+      }
       return anthropic(modelId)
+    
     case 'GOOGLE':
+      if (!process.env.GEMINI_API_KEY && !process.env.GOOGLE_AI_API_KEY && !process.env.GOOGLE_API_KEY) {
+        throw new Error('API Key de Google/Gemini no configurada. Añade GEMINI_API_KEY a tu archivo .env')
+      }
       return google(modelId)
+    
     case 'GROQ':
-      return groq(modelId)
+      if (!process.env.GROQ_API_KEY) {
+        throw new Error('API Key de Groq no configurada. Añade GROQ_API_KEY a tu archivo .env')
+      }
+      // Usar .chat() para endpoint /chat/completions (compatible con Groq)
+      // El default groq(modelId) usa /responses que no es soportado por Groq
+      return groq.chat(modelId)
+    
     default:
-      throw new Error(`Unsupported provider: ${provider}`)
+      throw new Error(`Proveedor no soportado: ${provider}`)
   }
 }
 
+// ============================================
+// Endpoint POST - Chat Streaming
+// ============================================
+
 export async function POST(request: NextRequest) {
   try {
-    // Verify authentication
+    // Verificar autenticación
     const authUser = await getAuthUser()
     
-    // Require authentication - no more demo mode
     if (!authUser) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized', code: 'AUTH_REQUIRED' }),
@@ -72,7 +114,7 @@ export async function POST(request: NextRequest) {
       temperature = 0.7,
     } = body
 
-    // Validate required fields
+    // Validar campos requeridos
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response(
         JSON.stringify({ error: 'Messages are required' }),
@@ -87,7 +129,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get model configuration
+    // Obtener configuración del modelo
     const modelConfig = getModelById(modelId)
     if (!modelConfig) {
       return new Response(
@@ -96,7 +138,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if model is available (premium models disabled)
+    // Verificar disponibilidad del modelo
     if (!modelConfig.isAvailable) {
       return new Response(
         JSON.stringify({
@@ -109,7 +151,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get or create user in Prisma
+    // Obtener o crear usuario en Prisma
     let user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -120,7 +162,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // If user doesn't exist in Prisma, create it (sync from Supabase Auth)
+    // Si el usuario no existe en Prisma, crearlo (sync desde Supabase Auth)
     if (!user) {
       console.log(`[API /chat] Usuario ${userId} no encontrado en Prisma, creando...`)
       
@@ -152,7 +194,7 @@ export async function POST(request: NextRequest) {
           }
         })
 
-        // Create welcome bonus transaction
+        // Crear transacción de bono de bienvenida
         await prisma.transaction.create({
           data: {
             userId,
@@ -173,7 +215,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Check daily usage
+    // Verificar uso diario
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     
@@ -202,7 +244,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Build system prompt from skill
+    // Construir system prompt desde skill
     let systemPrompt = ''
     if (skillId) {
       const skill = getSkillById(skillId)
@@ -211,17 +253,27 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // SANITIZATION: Convert messages to clean format for AI SDK
-    // Groq and strict models only accept { role: 'user' | 'assistant', content: string }
-    // Frontend may send complex objects or arrays that cause 400 errors
-    const coreMessages = messages.map((msg: { role: string; content: unknown }) => {
-      // Extract pure text from content
+    // ============================================
+    // SANITIZACIÓN DE MENSAJES (Crucial para Groq)
+    // ============================================
+    // Groq y otros modelos estrictos solo aceptan { role, content }
+    // El frontend puede enviar objetos complejos o arrays que causan error 400
+    
+    // LOG: Ver mensajes originales recibidos
+    console.log('[API /chat] === MENSAJES ORIGINALES ===')
+    console.log('[API /chat] Total mensajes recibidos:', messages.length)
+    messages.forEach((msg: { role: string; content: unknown }, idx: number) => {
+      console.log(`[API /chat] Msg ${idx}: role="${msg.role}", content type=${typeof msg.content}, preview="${String(msg.content).substring(0, 50)}..."`)
+    })
+    
+    const cleanMessages = messages.map((msg: { role: string; content: unknown }) => {
+      // Extraer texto puro del contenido
       let pureText = ''
       
       if (typeof msg.content === 'string') {
         pureText = msg.content
       } else if (Array.isArray(msg.content)) {
-        // Handle multimodal content arrays - extract only text parts
+        // Manejar contenido multimodal - extraer solo partes de texto
         pureText = msg.content
           .filter((part: unknown) =>
             typeof part === 'object' && part !== null && (part as { type?: string }).type === 'text'
@@ -232,7 +284,7 @@ export async function POST(request: NextRequest) {
         pureText = String(msg.content)
       }
 
-      // Normalize role - Groq doesn't accept 'function' role
+      // Normalizar rol - Groq no acepta rol 'function'
       let normalizedRole = msg.role?.toLowerCase() || 'user'
       if (normalizedRole === 'function' || normalizedRole === 'system') {
         normalizedRole = 'assistant'
@@ -242,93 +294,211 @@ export async function POST(request: NextRequest) {
         role: normalizedRole as 'user' | 'assistant',
         content: pureText,
       }
-    }).filter((msg) => msg.content.trim().length > 0) // Remove empty messages
+    }).filter((msg) => msg.content.trim().length > 0) // Eliminar mensajes vacíos
+    
+    // ============================================
+    // CORRECCIÓN: Fusionar roles consecutivos iguales
+    // ============================================
+    // Groq y OpenAI rechazan mensajes con roles consecutivos iguales
+    // Ejemplo: [user, user, assistant] -> [user, assistant]
+    
+    const mergedMessages: Array<{ role: 'user' | 'assistant'; content: string }> = []
+    
+    for (const msg of cleanMessages) {
+      const lastMsg = mergedMessages[mergedMessages.length - 1]
+      
+      if (lastMsg && lastMsg.role === msg.role) {
+        // Fusionar contenido de mensajes consecutivos del mismo rol
+        console.log(`[API /chat] Fusionando mensajes consecutivos con rol "${msg.role}"`)
+        lastMsg.content += '\n\n' + msg.content
+      } else {
+        mergedMessages.push({ ...msg })
+      }
+    }
+    
+    // LOG: Ver mensajes finales después de fusión
+    console.log('[API /chat] === MENSAJES FINALES (después de fusión) ===')
+    console.log('[API /chat] Total mensajes finales:', mergedMessages.length)
+    mergedMessages.forEach((msg, idx) => {
+      console.log(`[API /chat] Final ${idx}: role="${msg.role}", content length=${msg.content.length}`)
+    })
 
-    // Get model instance
+    // Obtener instancia del modelo
     const model = getModelInstance(modelId, modelConfig.provider)
 
-    // Build stream options
+    // Calcular max tokens de salida
     const maxOutputTokens = Math.min(maxTokens, modelConfig.maxOutputTokens)
 
-    // Execute streaming chat
-    // For Groq models with reasoning_effort, we need to pass it in the body
+    // ============================================
+    // Configuración de Opciones de Stream
+    // ============================================
+    
     const streamOptions: Record<string, unknown> = {
       model,
       system: systemPrompt || undefined,
-      messages: coreMessages,
+      messages: mergedMessages,
       temperature,
-      maxRetries: 3,
+      maxRetries: 5,
+      abortSignal: undefined,
+      // Configuración de reintentos con backoff exponencial
+      retry: {
+        maxRetries: 5,
+        initialDelay: 1000, // 1 segundo
+        maxDelay: 10000, // 10 segundos
+        backoffMultiplier: 2,
+      },
     }
 
-    // Add max_tokens via body for Groq compatibility
-    streamOptions.body = {
-      max_tokens: maxOutputTokens,
-    }
-
-    // Add reasoning_effort for Groq models that support it
-    if (modelConfig.provider === 'GROQ' && modelConfig.reasoningEffort) {
+    // Configurar body para Groq (max_tokens y reasoning_effort)
+    if (modelConfig.provider === 'GROQ') {
       streamOptions.body = {
-        ...streamOptions.body as object,
-        reasoning_effort: modelConfig.reasoningEffort,
+        max_tokens: maxOutputTokens,
+      }
+
+      // Inyectar reasoning_effort para modelos GPT-OSS en Groq
+      if (modelConfig.reasoningEffort) {
+        streamOptions.body = {
+          ...streamOptions.body as object,
+          reasoning_effort: modelConfig.reasoningEffort,
+        }
       }
     }
 
-    const result = streamText(streamOptions as Parameters<typeof streamText>[0])
+    // Log para depuración
+    console.log('[API /chat] === INICIANDO PETICIÓN A GROQ ===')
+    console.log('[API /chat] Timestamp:', new Date().toISOString())
+    console.log('[API /chat] Modelo:', modelId)
+    console.log('[API /chat] Provider:', modelConfig.provider)
+    console.log('[API /chat] Mensajes a enviar:', mergedMessages.length)
+    console.log('[API /chat] Opciones body:', JSON.stringify(streamOptions.body || {}))
+    console.log('[API /chat] Temperature:', temperature)
+    console.log('[API /chat] Max retries:', streamOptions.maxRetries)
+    
+    // Verificar si hay mensajes problemáticos
+    const problematicMsgs = mergedMessages.filter(m => !m.content || m.content.trim().length === 0)
+    if (problematicMsgs.length > 0) {
+      console.error('[API /chat] ⚠️ ALERTA: Hay mensajes vacíos que no fueron filtrados!')
+    }
+    
+    // 🔍 LOG ADICIONAL: Verificar rate limits potenciales
+    console.log('[API /chat] 🔍 DEBUG: Verificando posibles problemas...')
+    console.log('[API /chat] 🔍 Total tokens estimados en contexto:', mergedMessages.reduce((acc, m) => acc + Math.ceil(m.content.length / 4), 0))
+    console.log('[API /chat] 🔍 Número de mensajes en historial:', mergedMessages.length)
+    console.log('[API /chat] 🔍 Primer mensaje role:', mergedMessages[0]?.role)
+    console.log('[API /chat] 🔍 Último mensaje role:', mergedMessages[mergedMessages.length - 1]?.role)
 
-    // Track usage after stream completes
+    // Ejecutar stream con manejo de errores explícito
+    let result
+    try {
+      result = streamText(streamOptions as Parameters<typeof streamText>[0])
+      // Verificar si el result tiene errores inmediatos
+      console.log('[API /chat] streamText() llamado, verificando resultado...')
+    } catch (streamInitError) {
+      console.error('[API /chat] ⚠️ ERROR al inicializar streamText:', streamInitError)
+      throw streamInitError
+    }
+
+    // Variables para tracking de uso
     let totalPromptTokens = 0
     let totalCompletionTokens = 0
 
-    // Create a transform stream to process the response
+    // Crear stream de respuesta
     const encoder = new TextEncoder()
     const stream = new ReadableStream({
       async start(controller) {
         try {
           let fullContent = ''
+          let chunkCount = 0
           
-          // Process the stream
+          console.log('[API /chat] === INICIANDO STREAM ===')
+          
+          // Nota: En AI SDK v4/v6, los errores se capturan en el catch del for-await
+          // No existe result.error como propiedad en StreamTextResult
+          
+          // Procesar el stream
           for await (const chunk of result.textStream) {
+            chunkCount++
             fullContent += chunk
-            // Forward the chunk to the client
+            // Enviar chunk al cliente
             controller.enqueue(encoder.encode(`0:"${chunk.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"\n`))
           }
-
-          // Get usage info - AI SDK v6 uses totalTokens
-          const usage = await result.usage
-          totalPromptTokens = usage?.totalTokens ? Math.floor(usage.totalTokens * 0.7) : 0
-          totalCompletionTokens = usage?.totalTokens ? Math.floor(usage.totalTokens * 0.3) : 0
-
-          // Calculate points cost
-          const pointsUsed = calculatePointsCost(
-            modelId,
-            totalPromptTokens,
-            totalCompletionTokens
-          )
-
-          // Check if user has enough points
-          if (pointsUsed > user.pointsBalance) {
+          
+          console.log('[API /chat] === STREAM COMPLETADO ===')
+          console.log('[API /chat] Chunks recibidos:', chunkCount)
+          console.log('[API /chat] Contenido total:', fullContent.length, 'caracteres')
+          
+          // LOG: Detectar stream vacío
+          if (fullContent.length === 0) {
+            console.error('[API /chat] ⚠️ ERROR: Stream vacío - ningún contenido recibido de Groq')
+            console.error('[API /chat] Modelo:', modelId, '- Posible rate limiting')
+            console.error('[API /chat] 🔍 DEBUG: Chunk count:', chunkCount)
+            console.error('[API /chat] 🔍 DEBUG: Mensajes enviados:', mergedMessages.length)
+            console.error('[API /chat] 🔍 DEBUG: Último mensaje role:', mergedMessages[mergedMessages.length - 1]?.role)
+            
+            // 🔍 Intentar obtener más información del error
+            // Nota: En AI SDK v4/v6, el error se captura en el catch del stream, no en result.error
+            console.error('[API /chat] 🔍 Stream vacío - posible rate limit o error de Groq API')
+            
+            // Mensaje específico según el modelo
+            let errorMessage = '⏳ El servidor está ocupado. Por favor, espera unos segundos e intenta de nuevo.'
+            let errorCode = 'SERVER_BUSY'
+            
+            // Modelos con límites bajos (1000 RPD)
+            const lowLimitModels = ['llama-3.3-70b-versatile', 'llama-4-maverick', 'llama-4-scout']
+            if (lowLimitModels.some(m => modelId.includes(m))) {
+              errorMessage = `⏳ El modelo "${modelConfig.name}" tiene límites bajos. Recomendamos usar "Llama 3.1 8B" (14,400 peticiones/día).`
+              errorCode = 'RATE_LIMIT_LOW'
+            }
+            
             const errorData = JSON.stringify({
               type: 'error',
-              code: 'INSUFFICIENT_POINTS',
-              message: 'Insufficient points balance',
-              required: pointsUsed,
-              available: user.pointsBalance,
+              message: errorMessage,
+              code: errorCode,
+              retryAble: true,
+              modelId,
+              suggestion: 'Espera 2-3 segundos antes de enviar otro mensaje.',
             })
             controller.enqueue(encoder.encode(`e:${errorData}\n`))
             controller.close()
             return
           }
 
-          // Deduct points and record transaction
+          // Obtener info de uso - AI SDK v6 usa totalTokens
+          const usage = await result.usage
+          totalPromptTokens = usage?.totalTokens ? Math.floor(usage.totalTokens * 0.7) : 0
+          totalCompletionTokens = usage?.totalTokens ? Math.floor(usage.totalTokens * 0.3) : 0
+
+          // Calcular coste en puntos
+          const pointsUsed = calculatePointsCost(
+            modelId,
+            totalPromptTokens,
+            totalCompletionTokens
+          )
+
+          // Verificar si el usuario tiene suficientes puntos
+          if (pointsUsed > user!.pointsBalance) {
+            const errorData = JSON.stringify({
+              type: 'error',
+              code: 'INSUFFICIENT_POINTS',
+              message: 'Insufficient points balance',
+              required: pointsUsed,
+              available: user!.pointsBalance,
+            })
+            controller.enqueue(encoder.encode(`e:${errorData}\n`))
+            controller.close()
+            return
+          }
+
+          // Descontar puntos y registrar transacción
           await prisma.$transaction([
-            // Update user balance
+            // Actualizar balance del usuario
             prisma.user.update({
               where: { id: userId },
               data: {
                 pointsBalance: { decrement: pointsUsed },
               },
             }),
-            // Create transaction record
+            // Crear registro de transacción
             prisma.transaction.create({
               data: {
                 userId,
@@ -346,11 +516,11 @@ export async function POST(request: NextRequest) {
             }),
           ])
 
-          // Send telemetry data
+          // Enviar datos de telemetría
           const telemetryData = JSON.stringify({
             type: 'telemetry',
             pointsUsed,
-            remainingPoints: user.pointsBalance - pointsUsed,
+            remainingPoints: user!.pointsBalance - pointsUsed,
             promptTokens: totalPromptTokens,
             completionTokens: totalCompletionTokens,
             totalTokens: totalPromptTokens + totalCompletionTokens,
@@ -361,10 +531,51 @@ export async function POST(request: NextRequest) {
           
           controller.close()
         } catch (error) {
-          console.error('Stream error:', error)
+          console.error('[API /chat] === ERROR EN STREAM ===')
+          console.error('[API /chat] Error type:', error?.constructor?.name)
+          console.error('[API /chat] Error message:', error instanceof Error ? error.message : 'Unknown error')
+          console.error('[API /chat] Error stack:', error instanceof Error ? error.stack : 'No stack')
+          
+          // Intentar obtener más detalles del error
+          let errorDetails = {}
+          if (error instanceof Error) {
+            errorDetails = {
+              name: error.name,
+              message: error.message,
+              cause: error.cause,
+            }
+            // Buscar si hay un error de API incrustado
+            if (error.cause && typeof error.cause === 'object') {
+              console.error('[API /chat] Error cause:', JSON.stringify(error.cause, null, 2))
+              
+              // 🔍 LOG ADICIONAL: Extraer detalles específicos de errores de Groq
+              const causeObj = error.cause as Record<string, unknown>
+              if (causeObj.statusCode) {
+                console.error('[API /chat] 🔍 HTTP Status Code:', causeObj.statusCode)
+              }
+              if (causeObj.headers) {
+                console.error('[API /chat] 🔍 Response Headers:', JSON.stringify(causeObj.headers, null, 2))
+              }
+              if (causeObj.body) {
+                console.error('[API /chat] 🔍 Response Body:', JSON.stringify(causeObj.body, null, 2))
+              }
+            }
+          }
+          
+          // 🔍 Determinar si es un error de rate limiting
+          let errorMessage = error instanceof Error ? error.message : 'Unknown error'
+          let errorCode = 'STREAM_ERROR'
+          
+          if (errorMessage.includes('429') || errorMessage.includes('rate') || errorMessage.includes('limit')) {
+            errorMessage = '⏳ Límite de velocidad alcanzado. Espera unos segundos e intenta de nuevo.'
+            errorCode = 'RATE_LIMIT'
+          }
+          
           const errorData = JSON.stringify({
             type: 'error',
-            message: error instanceof Error ? error.message : 'Unknown error',
+            message: errorMessage,
+            code: errorCode,
+            details: errorDetails,
           })
           controller.enqueue(encoder.encode(`e:${errorData}\n`))
           controller.close()
@@ -372,7 +583,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Return streaming response
+    // Retornar respuesta streaming
     return new Response(stream, {
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
@@ -383,9 +594,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Chat API error:', error)
     
-    // Handle specific error types
+    // Manejar tipos específicos de errores
     if (error instanceof Error) {
-      // Rate limit errors (429)
+      // Errores de rate limit (429)
       if (error.message.includes('429') ||
           error.message.includes('rate limit') ||
           error.message.includes('quota') ||
@@ -394,13 +605,13 @@ export async function POST(request: NextRequest) {
           JSON.stringify({
             error: 'Límite gratuito alcanzado. Por favor, espera unos minutos antes de continuar.',
             code: 'RATE_LIMIT_EXCEEDED',
-            retryAfter: 60, // Suggest retry after 60 seconds
+            retryAfter: 60,
           }),
           { status: 429, headers: { 'Content-Type': 'application/json' } }
         )
       }
       
-      // Authentication errors
+      // Errores de autenticación
       if (error.message.includes('401') ||
           error.message.includes('Unauthorized') ||
           error.message.includes('Invalid API key')) {
@@ -413,7 +624,18 @@ export async function POST(request: NextRequest) {
         )
       }
       
-      // Context length exceeded
+      // Errores de API key no configurada
+      if (error.message.includes('API Key') && error.message.includes('no configurada')) {
+        return new Response(
+          JSON.stringify({
+            error: error.message,
+            code: 'API_KEY_MISSING',
+          }),
+          { status: 401, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+      
+      // Error de longitud de contexto
       if (error.message.includes('context') ||
           error.message.includes('token') ||
           error.message.includes('maximum')) {

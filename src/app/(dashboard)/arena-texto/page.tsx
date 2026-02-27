@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { ChatInterface } from '@/components/chat/chat-interface'
 import {
@@ -16,6 +16,12 @@ import {
 import { useChatStore } from '@/stores/chat-store'
 import { useUserStore } from '@/stores/user-store'
 import { estimateTokens } from '@/config'
+import type { Message } from '@/types'
+
+// Constants for retry logic
+const MAX_RETRIES = 3
+const RETRY_DELAYS = [3000, 6000, 10000] // 3s, 6s, 10s
+const COOLDOWN_MS = 5000 // 5 segundos - necesario para Groq TPM limits
 
 export default function ArenaTextoPage() {
   // Chat store
@@ -28,6 +34,7 @@ export default function ArenaTextoPage() {
   const setSelectedModelId = useChatStore((state) => state.setSelectedModelId)
   const addMessage = useChatStore((state) => state.addMessage)
   const updateLastMessage = useChatStore((state) => state.updateLastMessage)
+  const removeLastMessage = useChatStore((state) => state.removeLastMessage)
   const setStreaming = useChatStore((state) => state.setStreaming)
   const setSending = useChatStore((state) => state.setSending)
   const setError = useChatStore((state) => state.setError)
@@ -39,14 +46,23 @@ export default function ArenaTextoPage() {
   
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)
+  const lastMessageTimeRef = useRef<number>(0)
+  const retryCountRef = useRef<number>(0)
+  const currentContentRef = useRef<string>('')
+  
+  // Ref para mantener el historial de mensajes sincronizado (evita race conditions con closures)
+  const messagesRef = useRef<Message[]>([])
+  
+  // Sincronizar messagesRef con el estado de Zustand
+  useEffect(() => {
+    messagesRef.current = messages
+  }, [messages])
   
   // Estado para modo incógnito
   const [incognitoMode, setIncognitoMode] = useState(false)
 
-  // Send message to API
-  const handleSendMessage = useCallback(async (content: string) => {
-    if (!content.trim() || isStreaming || isSending) return
-    
+  // Internal function to execute the API call
+  const executeMessageRequest = useCallback(async (content: string) => {
     // Verificar que hay un modelo seleccionado
     if (!selectedModelId) {
       setError('Por favor, selecciona un modelo antes de enviar un mensaje.')
@@ -82,16 +98,25 @@ export default function ArenaTextoPage() {
     try {
       abortControllerRef.current = new AbortController()
       
+      // Construir mensajes para la API usando messagesRef (evita race conditions con closures)
+      const currentMessages = messagesRef.current
+      console.log('[arena-texto] 🔍 DEBUG: Estado de messages antes de construir:')
+      console.log('[arena-texto] 🔍 messagesRef.current.length:', currentMessages.length)
+      currentMessages.forEach((m, i) => {
+        console.log(`[arena-texto] 🔍 messages[${i}]: role="${m.role}", content length=${m.content?.length || 0}`)
+      })
+      
       const apiMessages = [
-        ...messages.map(m => ({
-          role: m.role.toLowerCase() as 'user' | 'assistant',
-          content: m.content,
-        })),
+        ...currentMessages
+          .filter(m => m.content.trim().length > 0)
+          .map(m => ({
+            role: m.role.toLowerCase() as 'user' | 'assistant',
+            content: m.content,
+          })),
         { role: 'user' as const, content: content.trim() },
       ]
       
-      // CORRECCIÓN: Usar modelId en lugar de model
-      // El endpoint /api/chat espera { messages, modelId, skillId }
+      console.log('[arena-texto] Mensajes a enviar:', apiMessages.length)
       console.log('[arena-texto] Enviando petición con modelId:', selectedModelId)
       
       const response = await fetch('/api/chat', {
@@ -99,7 +124,7 @@ export default function ArenaTextoPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: apiMessages,
-          modelId: selectedModelId, // CORREGIDO: era "model", ahora "modelId"
+          modelId: selectedModelId,
         }),
         signal: abortControllerRef.current.signal,
       })
@@ -118,6 +143,7 @@ export default function ArenaTextoPage() {
       
       let fullContent = ''
       let totalTokens = 0
+      let streamError: string | null = null
       
       while (true) {
         const { done, value } = await reader.read()
@@ -127,7 +153,34 @@ export default function ArenaTextoPage() {
         const lines = chunk.split('\n').filter(line => line.trim())
         
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
+          if (line.startsWith('0:')) {
+            try {
+              const jsonStr = line.slice(2)
+              const content = JSON.parse(jsonStr)
+              if (content) {
+                fullContent += content
+                updateLastMessage(fullContent)
+              }
+            } catch {
+              const content = line.slice(2).replace(/^"|"$/g, '').replace(/\\n/g, '\n').replace(/\\"/g, '"')
+              if (content) {
+                fullContent += content
+                updateLastMessage(fullContent)
+              }
+            }
+          } else if (line.startsWith('d:')) {
+            try {
+              const data = JSON.parse(line.slice(2))
+              totalTokens = data.totalTokens || 0
+            } catch {}
+          } else if (line.startsWith('e:')) {
+            try {
+              const errorData = JSON.parse(line.slice(2))
+              streamError = errorData.message || 'Error en el stream'
+              console.error('[arena-texto] Stream error:', streamError)
+              setError(streamError)
+            } catch {}
+          } else if (line.startsWith('data: ')) {
             const data = line.slice(6)
             if (data === '[DONE]') continue
             
@@ -143,49 +196,122 @@ export default function ArenaTextoPage() {
               if (parsed.usage) {
                 totalTokens = parsed.usage.total_tokens || 0
               }
-            } catch {
-              // Ignore parse errors for incomplete JSON
-            }
+            } catch {}
           }
         }
       }
       
-      // Calculate points cost (simplified)
-      const pointsCost = Math.ceil(totalTokens * 0.001)
+      // Si hubo error en el stream y no hay contenido, intentar reintento automático
+      if (streamError && fullContent.length === 0) {
+        console.log('[arena-texto] Stream con error y sin contenido')
+        
+        // Eliminar AMBOS mensajes (user y assistant) antes del reintento
+        // para evitar duplicación en el siguiente intento
+        removeLastMessage() // assistant vacío
+        removeLastMessage() // user
+        
+        // Reintentar automáticamente con backoff exponencial
+        if (retryCountRef.current < MAX_RETRIES) {
+          const delay = RETRY_DELAYS[retryCountRef.current]
+          console.log(`[arena-texto] Reintentando en ${delay/1000}s (intento ${retryCountRef.current + 1}/${MAX_RETRIES})`)
+          setError(`⏳ Reintentando automáticamente en ${delay/1000} segundos... (${retryCountRef.current + 1}/${MAX_RETRIES})`)
+          
+          // Incrementar contador de reintentos
+          retryCountRef.current++
+          
+          // Esperar antes de reintentar
+          await new Promise(resolve => setTimeout(resolve, delay))
+          
+          // Reintentar con el mismo contenido (se añadirán nuevos mensajes)
+          executeMessageRequest(content)
+          return
+        } else {
+          // Agotados los reintentos - los mensajes ya fueron eliminados arriba
+          setError('❌ El servidor está ocupado. Por favor, espera unos segundos e intenta de nuevo manualmente.')
+          retryCountRef.current = 0
+        }
+        return
+      }
       
-      // Update telemetry (promptTokens, completionTokens, pointsCost)
+      // Éxito - resetear contador de reintentos
+      retryCountRef.current = 0
+      
+      // Calculate points cost
+      const pointsCost = Math.ceil(totalTokens * 0.001)
       const promptTokens = estimateTokens(content)
       const completionTokens = totalTokens - promptTokens
       updateTelemetryAfterResponse(promptTokens, completionTokens > 0 ? completionTokens : totalTokens, pointsCost)
       
-      // Deduct points
       if (pointsCost > 0) {
         deductPoints(pointsCost)
       }
       
     } catch (err) {
+      // Eliminar ambos mensajes cuando hay error
+      removeLastMessage()
+      removeLastMessage()
+      
       if (err instanceof Error && err.name === 'AbortError') {
         console.log('Request aborted')
       } else {
+        console.error('[arena-texto] Error:', err)
+        
+        // Intentar reintento automático para errores de red
+        if (retryCountRef.current < MAX_RETRIES) {
+          const delay = RETRY_DELAYS[retryCountRef.current]
+          console.log(`[arena-texto] Error de red, reintentando en ${delay/1000}s`)
+          setError(`⏳ Error de conexión. Reintentando en ${delay/1000} segundos...`)
+          
+          retryCountRef.current++
+          
+          await new Promise(resolve => setTimeout(resolve, delay))
+          executeMessageRequest(content)
+          return
+        }
+        
         setError(err instanceof Error ? err.message : 'Error desconocido')
+        retryCountRef.current = 0
       }
     } finally {
       setStreaming(false)
       setSending(false)
     }
-  }, [messages, selectedModelId, isStreaming, isSending, addMessage, updateLastMessage, setStreaming, setSending, setError, updateTelemetryAfterResponse, deductPoints])
+  }, [selectedModelId, isStreaming, isSending, addMessage, updateLastMessage, removeLastMessage, setStreaming, setSending, setError, updateTelemetryAfterResponse, deductPoints])
+
+  // Main function to send message (compatible with ChatInterface)
+  const handleSendMessage = useCallback((content: string) => {
+    if (!content.trim() || isStreaming || isSending) return
+    
+    // Cooldown de 5 segundos entre mensajes para evitar rate limiting de Groq
+    const now = Date.now()
+    const timeSinceLastMessage = now - lastMessageTimeRef.current
+    if (timeSinceLastMessage < COOLDOWN_MS) {
+      const waitTime = Math.ceil((COOLDOWN_MS - timeSinceLastMessage) / 1000)
+      setError(`⏳ Por favor espera ${waitTime} segundo(s) antes de enviar otro mensaje. Los modelos gratuitos tienen límites de velocidad.`)
+      return
+    }
+    lastMessageTimeRef.current = now
+    
+    // Reset retry counter for new message
+    retryCountRef.current = 0
+    currentContentRef.current = content
+    
+    // Execute the request
+    executeMessageRequest(content)
+  }, [isStreaming, isSending, setError, executeMessageRequest])
 
   // Regenerate last response
   const handleRegenerate = useCallback(() => {
     if (messages.length < 2) return
     
-    // Remove last assistant message
     const lastUserMessage = messages.filter(m => m.role === 'USER').pop()
     if (lastUserMessage) {
-      // Re-send the last user message
-      handleSendMessage(lastUserMessage.content)
+      // Reset retry counter
+      retryCountRef.current = 0
+      currentContentRef.current = lastUserMessage.content
+      executeMessageRequest(lastUserMessage.content)
     }
-  }, [messages, handleSendMessage])
+  }, [messages, executeMessageRequest])
 
   // Delete chat
   const handleDeleteChat = useCallback(() => {

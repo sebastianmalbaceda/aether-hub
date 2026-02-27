@@ -104,20 +104,23 @@ import type { Message } from '@/types'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
-// Modelos gratuitos (Groq)
+// Modelos gratuitos (Groq - Free Tier)
 const freeModels = [
-  { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B', provider: 'Groq', description: 'Potente y rápido', tier: 'free' },
-  { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B', provider: 'Groq', description: 'Versátil y eficiente', tier: 'free' },
-  { id: 'qwen-2.5-32b', name: 'Qwen 2.5 32B', provider: 'Groq', description: 'Excelente en código', tier: 'free' },
-  { id: 'gemma2-9b-it', name: 'Gemma 2 9B', provider: 'Groq', description: 'Ligero y rápido', tier: 'free' },
+  { id: 'qwen/qwen3-32b', name: 'Qwen 3 32B', provider: 'Groq', description: 'Excelente para razonamiento', tier: 'free' },
+  { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B', provider: 'Groq', description: 'Respuestas rápidas', tier: 'free' },
+  { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B', provider: 'Groq', description: 'Potente y versátil', tier: 'free' },
+  { id: 'moonshotai/kimi-k2-instruct-0905', name: 'Kimi K2 Instruct', provider: 'Groq', description: 'Razonamiento avanzado', tier: 'free' },
+  { id: 'openai/gpt-oss-120b', name: 'GPT-OSS 120B', provider: 'Groq', description: 'Modelo de razonamiento', tier: 'free' },
+  { id: 'openai/gpt-oss-20b', name: 'GPT-OSS 20B', provider: 'Groq', description: 'Razonamiento medio', tier: 'free' },
 ]
 
-// Modelos premium (bloqueados)
+// Modelos premium (bloqueados - Próximamente)
 const premiumModels = [
-  { id: 'claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', description: 'El más inteligente', tier: 'premium' },
-  { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', description: 'Multimodal avanzado', tier: 'premium' },
-  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', provider: 'Google', description: 'Contexto ampliado', tier: 'premium' },
-  { id: 'o1-preview', name: 'o1 Preview', provider: 'OpenAI', description: 'Razonamiento profundo', tier: 'premium' },
+  { id: 'claude-4.6-opus', name: 'Claude 4.6 Opus', provider: 'Anthropic', description: 'El más potente de Anthropic', tier: 'flagship' },
+  { id: 'claude-4.6-sonnet', name: 'Claude 4.6 Sonnet', provider: 'Anthropic', description: 'Equilibrio perfecto', tier: 'premium' },
+  { id: 'chatgpt-5.2', name: 'ChatGPT 5.2', provider: 'OpenAI', description: 'El más avanzado de OpenAI', tier: 'flagship' },
+  { id: 'chatgpt-5.2-fast', name: 'ChatGPT 5.2 Fast', provider: 'OpenAI', description: 'Optimizado para velocidad', tier: 'premium' },
+  { id: 'gemini-3.1-pro', name: 'Gemini 3.1 Pro', provider: 'Google', description: 'El más avanzado de Google', tier: 'flagship' },
 ]
 
 // Asistentes disponibles
@@ -779,6 +782,8 @@ export function ChatInterface({
               
               {/* Textarea transparente */}
               <textarea
+                id="chat-input-message"
+                name="chat-input-message"
                 ref={textareaRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -1128,7 +1133,7 @@ export function ChatInterface({
         <DialogContent className="bg-popover/95 backdrop-blur-xl border-primary-500/20 max-w-md">
           <VisuallyHidden>
             <DialogTitle>Desbloquea Aether Premium</DialogTitle>
-            <DialogDescription>Accede a los modelos más potentes como Claude 3.5 Sonnet y GPT-4o.</DialogDescription>
+            <DialogDescription>Accede a los modelos más potentes como Claude 4.6 Opus y ChatGPT 5.2.</DialogDescription>
           </VisuallyHidden>
           <DialogHeader>
             <div className="flex items-center gap-3 mb-2">
@@ -1151,8 +1156,9 @@ export function ChatInterface({
             
             <ul className="space-y-2">
               {[
-                'Claude 3.5 Sonnet y GPT-4o',
-                'Contexto ampliado hasta 200K tokens',
+                'Claude 4.6 Opus y ChatGPT 5.2',
+                'Gemini 3.1 Pro y modelos flagship',
+                'Contexto ampliado hasta 256K tokens',
                 'Prioridad en tiempos de respuesta',
                 'Funciones avanzadas de análisis',
               ].map((feature, i) => (

@@ -32,6 +32,38 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" className="dark" suppressHydrationWarning>
+      <head>
+        {/* Script para eliminar atributos de extensiones del navegador antes de la hidratación */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                var removeAttributes = function() {
+                  var elements = document.querySelectorAll('[bis_skin_checked]');
+                  elements.forEach(function(el) {
+                    el.removeAttribute('bis_skin_checked');
+                  });
+                };
+                removeAttributes();
+                if (typeof MutationObserver !== 'undefined') {
+                  var observer = new MutationObserver(function(mutations) {
+                    mutations.forEach(function(mutation) {
+                      if (mutation.type === 'attributes' && mutation.attributeName === 'bis_skin_checked') {
+                        mutation.target.removeAttribute('bis_skin_checked');
+                      }
+                    });
+                  });
+                  observer.observe(document.documentElement, {
+                    attributes: true,
+                    attributeFilter: ['bis_skin_checked'],
+                    subtree: true
+                  });
+                }
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`} suppressHydrationWarning>
         {children}
         <Toaster

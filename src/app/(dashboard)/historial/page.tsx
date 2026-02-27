@@ -26,7 +26,7 @@ const historyItems = [
     id: 1,
     title: 'Análisis de mercado tech 2024',
     type: 'text' as const,
-    model: 'GPT-4o',
+    model: 'Qwen 3 32B',
     tokens: 12500,
     date: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
     preview: 'El mercado tecnológico en 2024 muestra tendencias claras hacia la inteligencia artificial...',
@@ -35,7 +35,7 @@ const historyItems = [
     id: 2,
     title: 'Refactorización de API REST',
     type: 'code' as const,
-    model: 'Claude 3.5 Sonnet',
+    model: 'Llama 3.3 70B',
     tokens: 8200,
     date: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5 hours ago
     preview: 'Aquí tienes una versión refactorizada de tu API con mejores prácticas...',
@@ -44,7 +44,7 @@ const historyItems = [
     id: 3,
     title: 'Logo para startup tecnológica',
     type: 'image' as const,
-    model: 'DALL-E 3',
+    model: 'Kimi K2',
     tokens: 3000,
     date: new Date(Date.now() - 24 * 60 * 60 * 1000), // Yesterday
     preview: 'Un logo minimalista con gradientes azules y formas geométricas...',

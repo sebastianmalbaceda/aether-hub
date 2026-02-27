@@ -58,9 +58,9 @@ const arenas = [
 ]
 
 const recentSessions = [
-  { id: 1, title: 'Análisis de mercado tech 2024', model: 'GPT-4o', tokens: 12500, date: 'Hace 2 horas' },
-  { id: 2, title: 'Refactorización de API REST', model: 'Claude 3.5 Sonnet', tokens: 8200, date: 'Hace 5 horas' },
-  { id: 3, title: 'Generación de logo para startup', model: 'DALL-E 3', tokens: 3000, date: 'Ayer' },
+  { id: 1, title: 'Análisis de mercado tech 2024', model: 'Qwen 3 32B', tokens: 12500, date: 'Hace 2 horas' },
+  { id: 2, title: 'Refactorización de API REST', model: 'Llama 3.3 70B', tokens: 8200, date: 'Hace 5 horas' },
+  { id: 3, title: 'Generación de logo para startup', model: 'Kimi K2', tokens: 3000, date: 'Ayer' },
 ]
 
 export default function DashboardPage() {

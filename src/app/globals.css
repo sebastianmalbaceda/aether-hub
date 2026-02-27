@@ -1,3 +1,6 @@
+/* Import Google Fonts - DEBE ESTAR AL PRINCIPIO del archivo (antes de @tailwind) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,9 +8,6 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    AETHER DESIGN SYSTEM - Fusionando identidad Aether con elegancia Claude
    ═══════════════════════════════════════════════════════════════════════════ */
-
-/* Import Google Fonts - Serif elegante para títulos, Sans para UI */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:wght@400;500;600;700&display=swap');
 
 @layer base {
   :root {

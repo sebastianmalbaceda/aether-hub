@@ -44,6 +44,7 @@ interface ChatState {
   setMessages: (messages: Message[]) => void
   addMessage: (message: Message) => void
   updateLastMessage: (content: string) => void
+  removeLastMessage: () => void
   clearMessages: () => void
   
   // Actions - Selection
@@ -143,6 +144,13 @@ export const useChatStore = create<ChatState>()(
           }
           return { messages }
         })
+      },
+      
+      removeLastMessage: () => {
+        set((state) => ({
+          messages: state.messages.slice(0, -1)
+        }))
+        get().recalculateContextUsage()
       },
       
       clearMessages: () => set({ 
@@ -305,6 +313,25 @@ export const useChatStore = create<ChatState>()(
         selectedSkillId: state.selectedSkillId,
         currentSessionId: state.currentSessionId,
       }),
+      // Validar modelo persistido al cargar desde localStorage
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          // Modelos con límites diarios bajos (RPD <= 1000)
+          const lowLimitModels = [
+            'llama-3.3-70b-versatile',
+            'llama-4-maverick-17b-128e-instruct',
+            'llama-4-scout-17b-16e-instruct',
+          ]
+          
+          // Si el modelo persistido tiene límites bajos, cambiar al default
+          if (lowLimitModels.some(m => state.selectedModelId.includes(m.replace('meta-llama/', '')))) {
+            console.log('[ChatStore] Modelo persistido tiene límites bajos, cambiando a Llama 3.1 8B')
+            state.selectedModelId = defaultModel.id
+            state.telemetry.currentModel = defaultModel.name
+            state.telemetry.contextLimit = defaultModel.contextWindow
+          }
+        }
+      },
     }
   )
 )

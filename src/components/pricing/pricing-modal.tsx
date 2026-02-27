@@ -37,12 +37,12 @@ const plans = [
     bgColor: 'bg-green-500/10',
     borderColor: 'border-green-500/30',
     features: [
-      { text: 'Acceso a modelos open-source (Llama, Mixtral, Qwen)', included: true },
-      { text: '5,000 puntos mensuales', included: true },
+      { text: 'Acceso a modelos Groq gratuitos (Llama, Qwen, Kimi)', included: true },
+      { text: '10,000 puntos de bienvenida', included: true },
       { text: 'Historial de conversaciones', included: true },
       { text: 'Arena Texto y Código', included: true },
-      { text: 'Modelos Premium (Claude, GPT-4)', included: false },
-      { text: 'Contexto ampliado (200K)', included: false },
+      { text: 'Modelos Premium (Claude 4.6, ChatGPT 5.2)', included: false },
+      { text: 'Contexto ampliado (256K)', included: false },
       { text: 'Soporte prioritario', included: false },
     ],
     cta: 'Plan actual',
@@ -61,10 +61,10 @@ const plans = [
     features: [
       { text: 'Todo lo del Plan Gratuito', included: true },
       { text: '50,000 puntos mensuales', included: true },
-      { text: 'Acceso a Claude 3.5 Sonnet', included: true },
-      { text: 'Acceso a GPT-4o y GPT-4 Turbo', included: true },
-      { text: 'Acceso a Gemini 1.5 Pro', included: true },
-      { text: 'Contexto ampliado hasta 200K tokens', included: true },
+      { text: 'Acceso a Claude 4.6 Opus y Sonnet', included: true },
+      { text: 'Acceso a ChatGPT 5.2 y GPT-4o', included: true },
+      { text: 'Acceso a Gemini 3.1 Pro', included: true },
+      { text: 'Contexto ampliado hasta 256K tokens', included: true },
       { text: 'Soporte prioritario 24/7', included: true },
     ],
     cta: 'Actualizar ahora',
@@ -95,9 +95,9 @@ const plans = [
 
 // Premium models showcase
 const premiumModels = [
-  { name: 'Claude 3.5 Sonnet', provider: 'Anthropic', icon: Bot },
-  { name: 'GPT-4o', provider: 'OpenAI', icon: Brain },
-  { name: 'Gemini 1.5 Pro', provider: 'Google', icon: Sparkles },
+  { name: 'Claude 4.6 Opus', provider: 'Anthropic', icon: Bot },
+  { name: 'ChatGPT 5.2', provider: 'OpenAI', icon: Brain },
+  { name: 'Gemini 3.1 Pro', provider: 'Google', icon: Sparkles },
 ]
 
 interface PricingModalProps {
