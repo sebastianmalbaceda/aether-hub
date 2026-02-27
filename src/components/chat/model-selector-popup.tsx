@@ -22,42 +22,12 @@ import {
 } from 'lucide-react'
 import { AI_MODELS, type AIModelConfig } from '@/config/ai-models'
 
-// Modelos nativos de Aether (simulados)
-const aetherModels: AIModelConfig[] = [
-  {
-    id: 'aether-pro',
-    name: 'Aether Pro',
-    provider: 'OPENAI' as const,
-    providerDisplayName: 'Aether',
-    contextWindow: 200000,
-    maxOutputTokens: 8192,
-    supportsVision: true,
-    supportsFunctionCalling: true,
-    supportsJsonMode: true,
-    pricing: { inputPer1K: 2, outputPer1K: 8 },
-    tier: 'flagship',
-    isAvailable: true,
-    description: 'Más potente para trabajo ambicioso y complejo.',
-  },
-  {
-    id: 'aether-flash',
-    name: 'Aether Flash',
-    provider: 'OPENAI' as const,
-    providerDisplayName: 'Aether',
-    contextWindow: 128000,
-    maxOutputTokens: 4096,
-    supportsVision: true,
-    supportsFunctionCalling: true,
-    supportsJsonMode: true,
-    pricing: { inputPer1K: 0.5, outputPer1K: 2 },
-    tier: 'standard',
-    isAvailable: true,
-    description: 'Más eficiente para tareas cotidianas.',
-  },
-]
+// Modelos disponibles - Solo modelos reales con IDs exactos para Groq
+// IMPORTANTE: Los IDs deben coincidir exactamente con los de la API de Groq
+const availableModels = AI_MODELS.filter(m => m.isAvailable)
 
-// Modelos de terceros disponibles
-const thirdPartyModels = AI_MODELS.filter(m => m.isAvailable).slice(0, 6)
+// Modelos destacados para mostrar primero (Groq gratuitos)
+const featuredModels = availableModels.filter(m => m.provider === 'GROQ')
 
 interface ModelSelectorPopupProps {
   selectedModelId: string
@@ -74,12 +44,14 @@ export function ModelSelectorPopup({
 }: ModelSelectorPopupProps) {
   const [open, setOpen] = useState(false)
 
-  const selectedModel = [...aetherModels, ...AI_MODELS].find(m => m.id === selectedModelId)
+  const selectedModel = availableModels.find(m => m.id === selectedModelId)
   
   const getModelIcon = (modelId: string) => {
-    if (modelId.includes('aether')) return Sparkles
     if (modelId.includes('claude')) return Bot
     if (modelId.includes('gpt')) return Brain
+    if (modelId.includes('llama')) return Cpu
+    if (modelId.includes('qwen')) return Sparkles
+    if (modelId.includes('kimi')) return Brain
     return Cpu
   }
 
@@ -159,17 +131,17 @@ export function ModelSelectorPopup({
 
         <div className="max-h-[400px] overflow-y-auto scrollbar-hide">
           {/* ═══════════════════════════════════════════════════════════════
-              Sección 1: Modelos Nativos Aether (Recomendados)
+              Sección 1: Modelos Groq (Gratuitos - Recomendados)
           ═══════════════════════════════════════════════════════════════ */}
           <div className="p-2">
             <div className="flex items-center gap-2 px-2 py-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-primary-400" />
+              <Zap className="h-3.5 w-3.5 text-green-400" />
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Modelos Aether
+                Groq - Ultra Rápido (Gratis)
               </span>
             </div>
             
-            {aetherModels.map((model) => {
+            {featuredModels.map((model) => {
               const isSelected = selectedModelId === model.id
               const Icon = getModelIcon(model.id)
               
@@ -218,60 +190,62 @@ export function ModelSelectorPopup({
           <div className="mx-3 border-t border-border/50" />
 
           {/* ═══════════════════════════════════════════════════════════════
-              Sección 2: Modelos de Terceros (El HUB)
+              Sección 2: Otros Modelos Disponibles
           ═══════════════════════════════════════════════════════════════ */}
-          <div className="p-2">
-            <div className="flex items-center gap-2 px-2 py-1.5">
-              <Bot className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Modelos de Terceros
-              </span>
-            </div>
-            
-            {thirdPartyModels.map((model) => {
-              const isSelected = selectedModelId === model.id
-              const Icon = getModelIcon(model.id)
+          {availableModels.filter(m => m.provider !== 'GROQ').length > 0 && (
+            <div className="p-2">
+              <div className="flex items-center gap-2 px-2 py-1.5">
+                <Bot className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Otros Proveedores
+                </span>
+              </div>
               
-              return (
-                <button
-                  key={model.id}
-                  onClick={() => {
-                    onModelSelect(model.id)
-                    setOpen(false)
-                  }}
-                  className={cn(
-                    "w-full flex items-start gap-3 p-2.5 rounded-lg text-left transition-all duration-200",
-                    isSelected 
-                      ? "bg-primary-500/15 border border-primary-500/30" 
-                      : "hover:bg-secondary/80 border border-transparent"
-                  )}
-                >
-                  <div className={cn(
-                    "flex h-9 w-9 items-center justify-center rounded-lg shrink-0",
-                    isSelected ? "bg-primary-500/20" : "bg-secondary"
-                  )}>
-                    <Icon className={cn(
-                      "h-5 w-5",
-                      isSelected ? "text-primary-400" : "text-muted-foreground"
-                    )} />
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm">{model.name}</span>
-                      <span className="text-[10px] text-muted-foreground">{model.providerDisplayName}</span>
-                      {isSelected && (
-                        <Check className="h-4 w-4 text-primary-400 ml-auto" />
-                      )}
+              {availableModels.filter(m => m.provider !== 'GROQ').map((model) => {
+                const isSelected = selectedModelId === model.id
+                const Icon = getModelIcon(model.id)
+                
+                return (
+                  <button
+                    key={model.id}
+                    onClick={() => {
+                      onModelSelect(model.id)
+                      setOpen(false)
+                    }}
+                    className={cn(
+                      "w-full flex items-start gap-3 p-2.5 rounded-lg text-left transition-all duration-200",
+                      isSelected 
+                        ? "bg-primary-500/15 border border-primary-500/30" 
+                        : "hover:bg-secondary/80 border border-transparent"
+                    )}
+                  >
+                    <div className={cn(
+                      "flex h-9 w-9 items-center justify-center rounded-lg shrink-0",
+                      isSelected ? "bg-primary-500/20" : "bg-secondary"
+                    )}>
+                      <Icon className={cn(
+                        "h-5 w-5",
+                        isSelected ? "text-primary-400" : "text-muted-foreground"
+                      )} />
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                      {model.description || `${model.contextWindow / 1000}K contexto`}
-                    </p>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm">{model.name}</span>
+                        <span className="text-[10px] text-muted-foreground">{model.providerDisplayName}</span>
+                        {isSelected && (
+                          <Check className="h-4 w-4 text-primary-400 ml-auto" />
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                        {model.description || `${model.contextWindow / 1000}K contexto`}
+                      </p>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          )}
 
           {/* Separador */}
           <div className="mx-3 border-t border-border/50" />
@@ -343,7 +317,7 @@ export function ModelSelectorCompact({
 }: Pick<ModelSelectorPopupProps, 'selectedModelId' | 'onModelSelect'>) {
   const [open, setOpen] = useState(false)
   
-  const selectedModel = [...aetherModels, ...AI_MODELS].find(m => m.id === selectedModelId)
+  const selectedModel = availableModels.find(m => m.id === selectedModelId)
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -371,11 +345,11 @@ export function ModelSelectorCompact({
       >
         {/* Versión compacta del selector */}
         <div className="p-2 max-h-[300px] overflow-y-auto scrollbar-hide">
-          {/* Aether Models */}
+          {/* Groq Models */}
           <div className="px-2 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-            Aether
+            Groq (Gratis)
           </div>
-          {aetherModels.map((model) => {
+          {featuredModels.map((model) => {
             const isSelected = selectedModelId === model.id
             return (
               <button
@@ -391,46 +365,50 @@ export function ModelSelectorCompact({
                     : "hover:bg-secondary/80"
                 )}
               >
-                <Sparkles className="h-4 w-4" />
+                <Zap className="h-4 w-4" />
                 <span>{model.name}</span>
                 {isSelected && <Check className="h-4 w-4 ml-auto" />}
               </button>
             )
           })}
           
-          <div className="my-2 border-t border-border/50" />
-          
-          {/* Third Party */}
-          <div className="px-2 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-            Terceros
-          </div>
-          {thirdPartyModels.slice(0, 4).map((model) => {
-            const isSelected = selectedModelId === model.id
-            return (
-              <button
-                key={model.id}
-                onClick={() => {
-                  onModelSelect(model.id)
-                  setOpen(false)
-                }}
-                className={cn(
-                  "w-full flex items-center gap-2 p-2 rounded-lg text-left text-sm transition-all duration-200",
-                  isSelected 
-                    ? "bg-primary-500/15 text-primary-400" 
-                    : "hover:bg-secondary/80"
-                )}
-              >
-                <Bot className="h-4 w-4" />
-                <span>{model.name}</span>
-                <span className="text-[10px] text-muted-foreground">{model.providerDisplayName}</span>
-                {isSelected && <Check className="h-4 w-4 ml-auto" />}
-              </button>
-            )
-          })}
+          {availableModels.filter(m => m.provider !== 'GROQ').length > 0 && (
+            <>
+              <div className="my-2 border-t border-border/50" />
+              
+              {/* Other Providers */}
+              <div className="px-2 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                Otros
+              </div>
+              {availableModels.filter(m => m.provider !== 'GROQ').slice(0, 4).map((model) => {
+                const isSelected = selectedModelId === model.id
+                return (
+                  <button
+                    key={model.id}
+                    onClick={() => {
+                      onModelSelect(model.id)
+                      setOpen(false)
+                    }}
+                    className={cn(
+                      "w-full flex items-center gap-2 p-2 rounded-lg text-left text-sm transition-all duration-200",
+                      isSelected 
+                        ? "bg-primary-500/15 text-primary-400" 
+                        : "hover:bg-secondary/80"
+                    )}
+                  >
+                    <Bot className="h-4 w-4" />
+                    <span>{model.name}</span>
+                    <span className="text-[10px] text-muted-foreground">{model.providerDisplayName}</span>
+                    {isSelected && <Check className="h-4 w-4 ml-auto" />}
+                  </button>
+                )
+              })}
+            </>
+          )}
         </div>
       </PopoverContent>
     </Popover>
   )
 }
 
-export { aetherModels }
+export { availableModels }

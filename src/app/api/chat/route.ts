@@ -10,6 +10,9 @@ import { getModelById, getSkillById, calculatePointsCost } from '@/config'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+// Puntos de bienvenida para nuevos usuarios
+const WELCOME_BONUS_POINTS = 10000
+
 // Initialize AI clients
 const openai = createOpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -30,13 +33,8 @@ const groq = createOpenAI({
 })
 
 // Get the appropriate model instance for the AI SDK
-function getModelInstance(modelId: string) {
-  const modelConfig = getModelById(modelId)
-  if (!modelConfig) {
-    throw new Error(`Model ${modelId} not found`)
-  }
-
-  switch (modelConfig.provider) {
+function getModelInstance(modelId: string, provider: string) {
+  switch (provider) {
     case 'OPENAI':
       return openai(modelId)
     case 'ANTHROPIC':
@@ -46,33 +44,24 @@ function getModelInstance(modelId: string) {
     case 'GROQ':
       return groq(modelId)
     default:
-      throw new Error(`Unsupported provider: ${modelConfig.provider}`)
+      throw new Error(`Unsupported provider: ${provider}`)
   }
-}
-
-// Demo mode: Allow requests without authentication for development
-// Set DEMO_MODE=true in .env to enable, or it auto-enables if no DATABASE_URL
-const isDemoMode = () => {
-  if (process.env.DEMO_MODE === 'true') return true
-  if (!process.env.DATABASE_URL) return true
-  return false
 }
 
 export async function POST(request: NextRequest) {
   try {
     // Verify authentication
     const authUser = await getAuthUser()
-    const demoMode = isDemoMode()
     
-    // Allow requests without authentication in demo mode
-    if (!authUser && !demoMode) {
+    // Require authentication - no more demo mode
+    if (!authUser) {
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
+        JSON.stringify({ error: 'Unauthorized', code: 'AUTH_REQUIRED' }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
       )
     }
 
-    const userId = authUser?.id || 'demo_user'
+    const userId = authUser.id
     const body = await request.json()
     
     const { 
@@ -102,7 +91,7 @@ export async function POST(request: NextRequest) {
     const modelConfig = getModelById(modelId)
     if (!modelConfig) {
       return new Response(
-        JSON.stringify({ error: `Model ${modelId} not found` }),
+        JSON.stringify({ error: `Model ${modelId} not found in configuration` }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       )
     }
@@ -111,7 +100,7 @@ export async function POST(request: NextRequest) {
     if (!modelConfig.isAvailable) {
       return new Response(
         JSON.stringify({
-          error: `El modelo ${modelConfig.name} no está disponible en el plan actual. Por favor, selecciona un modelo gratuito de Groq o Google.`,
+          error: `El modelo ${modelConfig.name} no está disponible en el plan actual. Por favor, selecciona un modelo gratuito de Groq.`,
           code: 'MODEL_UNAVAILABLE',
           modelName: modelConfig.name,
           provider: modelConfig.providerDisplayName,
@@ -120,48 +109,88 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get user's current points balance and settings (skip in demo mode)
-    let user: { pointsBalance: number; settings: { dailyPointsLimit: number } | null } | null = null
-    let dailyUsed = 0
-    
-    if (!demoMode && authUser) {
-      user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: {
-          pointsBalance: true,
-          settings: {
-            select: { dailyPointsLimit: true }
-          }
-        },
-      })
+    // Get or create user in Prisma
+    let user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        pointsBalance: true,
+        settings: {
+          select: { dailyPointsLimit: true }
+        }
+      },
+    })
 
-      if (!user) {
+    // If user doesn't exist in Prisma, create it (sync from Supabase Auth)
+    if (!user) {
+      console.log(`[API /chat] Usuario ${userId} no encontrado en Prisma, creando...`)
+      
+      try {
+        user = await prisma.user.create({
+          data: {
+            id: userId,
+            email: authUser.email || `user_${userId}@aether.local`,
+            fullName: authUser.user_metadata?.full_name || authUser.user_metadata?.name || null,
+            avatarUrl: authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || null,
+            pointsBalance: WELCOME_BONUS_POINTS,
+            role: 'USER',
+            isActive: true,
+            settings: {
+              create: {
+                dailyPointsLimit: 10000,
+                sessionTokensLimit: 100000,
+                preferredModel: 'llama-3.1-8b-instant',
+                theme: 'dark',
+                language: 'es',
+              }
+            }
+          },
+          select: {
+            pointsBalance: true,
+            settings: {
+              select: { dailyPointsLimit: true }
+            }
+          }
+        })
+
+        // Create welcome bonus transaction
+        await prisma.transaction.create({
+          data: {
+            userId,
+            type: 'BONUS',
+            pointsAmount: WELCOME_BONUS_POINTS,
+            description: 'Bono de bienvenida - 10,000 puntos gratis',
+            metadata: { type: 'welcome_bonus' }
+          }
+        })
+
+        console.log(`[API /chat] Usuario ${userId} creado con ${WELCOME_BONUS_POINTS} puntos de bienvenida`)
+      } catch (createError) {
+        console.error('[API /chat] Error creando usuario:', createError)
         return new Response(
-          JSON.stringify({ error: 'User not found' }),
-          { status: 404, headers: { 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: 'Error creating user profile', code: 'USER_CREATE_ERROR' }),
+          { status: 500, headers: { 'Content-Type': 'application/json' } }
         )
       }
-
-      // Check daily usage
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      
-      const todayUsage = await prisma.transaction.aggregate({
-        where: {
-          userId,
-          type: 'USAGE_DEDUCTION',
-          createdAt: { gte: today },
-        },
-        _sum: { pointsAmount: true },
-      })
-
-      dailyUsed = Math.abs(todayUsage._sum.pointsAmount || 0)
     }
 
-    const dailyPointsLimit = user?.settings?.dailyPointsLimit || 10000
+    // Check daily usage
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    const todayUsage = await prisma.transaction.aggregate({
+      where: {
+        userId,
+        type: 'USAGE_DEDUCTION',
+        createdAt: { gte: today },
+      },
+      _sum: { pointsAmount: true },
+    })
+
+    const dailyUsed = Math.abs(todayUsage._sum.pointsAmount || 0)
+    const dailyPointsLimit = user.settings?.dailyPointsLimit || 10000
     const remainingDaily = dailyPointsLimit - dailyUsed
 
-    if (!demoMode && remainingDaily <= 0) {
+    if (remainingDaily <= 0) {
       return new Response(
         JSON.stringify({
           error: 'Daily limit exceeded',
@@ -216,23 +245,34 @@ export async function POST(request: NextRequest) {
     }).filter((msg) => msg.content.trim().length > 0) // Remove empty messages
 
     // Get model instance
-    const model = getModelInstance(modelId)
+    const model = getModelInstance(modelId, modelConfig.provider)
 
-    // Build stream options with optional reasoning effort for Groq models
+    // Build stream options
+    const maxOutputTokens = Math.min(maxTokens, modelConfig.maxOutputTokens)
+
+    // Execute streaming chat
+    // For Groq models with reasoning_effort, we need to pass it in the body
     const streamOptions: Record<string, unknown> = {
       model,
       system: systemPrompt || undefined,
       messages: coreMessages,
       temperature,
-      maxTokens: Math.min(maxTokens, modelConfig.maxOutputTokens),
+      maxRetries: 3,
+    }
+
+    // Add max_tokens via body for Groq compatibility
+    streamOptions.body = {
+      max_tokens: maxOutputTokens,
     }
 
     // Add reasoning_effort for Groq models that support it
     if (modelConfig.provider === 'GROQ' && modelConfig.reasoningEffort) {
-      streamOptions.reasoning_effort = modelConfig.reasoningEffort
+      streamOptions.body = {
+        ...streamOptions.body as object,
+        reasoning_effort: modelConfig.reasoningEffort,
+      }
     }
 
-    // Execute streaming chat
     const result = streamText(streamOptions as Parameters<typeof streamText>[0])
 
     // Track usage after stream completes
@@ -253,10 +293,10 @@ export async function POST(request: NextRequest) {
             controller.enqueue(encoder.encode(`0:"${chunk.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"\n`))
           }
 
-          // Get usage info
+          // Get usage info - AI SDK v6 uses totalTokens
           const usage = await result.usage
-          totalPromptTokens = usage?.totalTokens ? Math.floor(usage.totalTokens * 0.7) : 0 // Estimate
-          totalCompletionTokens = usage?.totalTokens ? Math.floor(usage.totalTokens * 0.3) : 0 // Estimate
+          totalPromptTokens = usage?.totalTokens ? Math.floor(usage.totalTokens * 0.7) : 0
+          totalCompletionTokens = usage?.totalTokens ? Math.floor(usage.totalTokens * 0.3) : 0
 
           // Calculate points cost
           const pointsUsed = calculatePointsCost(
@@ -265,8 +305,8 @@ export async function POST(request: NextRequest) {
             totalCompletionTokens
           )
 
-          // Check if user has enough points (skip in demo mode)
-          if (!demoMode && user && pointsUsed > user.pointsBalance) {
+          // Check if user has enough points
+          if (pointsUsed > user.pointsBalance) {
             const errorData = JSON.stringify({
               type: 'error',
               code: 'INSUFFICIENT_POINTS',
@@ -279,40 +319,38 @@ export async function POST(request: NextRequest) {
             return
           }
 
-          // Deduct points and record transaction (skip in demo mode)
-          if (!demoMode && user) {
-            await prisma.$transaction([
-              // Update user balance
-              prisma.user.update({
-                where: { id: userId },
-                data: {
-                  pointsBalance: { decrement: pointsUsed },
+          // Deduct points and record transaction
+          await prisma.$transaction([
+            // Update user balance
+            prisma.user.update({
+              where: { id: userId },
+              data: {
+                pointsBalance: { decrement: pointsUsed },
+              },
+            }),
+            // Create transaction record
+            prisma.transaction.create({
+              data: {
+                userId,
+                type: 'USAGE_DEDUCTION',
+                pointsAmount: -pointsUsed,
+                description: `Chat usage: ${modelConfig.name}`,
+                metadata: {
+                  modelId,
+                  skillId,
+                  promptTokens: totalPromptTokens,
+                  completionTokens: totalCompletionTokens,
+                  totalTokens: totalPromptTokens + totalCompletionTokens,
                 },
-              }),
-              // Create transaction record
-              prisma.transaction.create({
-                data: {
-                  userId,
-                  type: 'USAGE_DEDUCTION',
-                  pointsAmount: -pointsUsed,
-                  description: `Chat usage: ${modelConfig.name}`,
-                  metadata: {
-                    modelId,
-                    skillId,
-                    promptTokens: totalPromptTokens,
-                    completionTokens: totalCompletionTokens,
-                    totalTokens: totalPromptTokens + totalCompletionTokens,
-                  },
-                },
-              }),
-            ])
-          }
+              },
+            }),
+          ])
 
           // Send telemetry data
           const telemetryData = JSON.stringify({
             type: 'telemetry',
             pointsUsed,
-            remainingPoints: demoMode ? 10000 - pointsUsed : (user?.pointsBalance || 10000) - pointsUsed,
+            remainingPoints: user.pointsBalance - pointsUsed,
             promptTokens: totalPromptTokens,
             completionTokens: totalCompletionTokens,
             totalTokens: totalPromptTokens + totalCompletionTokens,

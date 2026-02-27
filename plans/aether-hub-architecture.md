@@ -12,13 +12,20 @@
 - **Base de Datos:** Supabase (PostgreSQL + Auth + Realtime)
 - **ORM:** Prisma
 - **Pagos:** Stripe API
-- **IA:** OpenAI SDK compatible, LangChain (opcional)
+- **IA:** Vercel AI SDK (OpenAI, Anthropic, Google, Groq)
 
-**Paleta de Colores (Arcano-Tecnológico):**
-- Primary: Violeta eléctrico (`#8B5CF6`, `#7C3AED`, `#6D28D9`)
-- Background: Oscuro elegante (`#0F0F1A`, `#1A1A2E`, `#16213E`)
-- Accent: Violeta brillante para highlights
-- Text: Blancos y grises suaves
+---
+
+## 📚 Documentación Oficial (Fuente de Verdad)
+
+Esta carpeta contiene la documentación actualizada del proyecto. **Consultar estos documentos antes de realizar cambios:**
+
+| Documento | Propósito | Cuándo Consultar |
+|-----------|-----------|------------------|
+| [`ui-design-system.md`](ui-design-system.md) | Frontend, UI/UX, Layout, Componentes | Antes de modificar cualquier componente visual |
+| [`api-routes.md`](api-routes.md) | Backend, APIs, Modelos IA, Endpoints | Antes de añadir/modificar endpoints o modelos |
+| [`prisma-schema.md`](prisma-schema.md) | Base de Datos, Estado, Null-Checks | Antes de modificar el esquema o estado |
+| [`implementation-plan.md`](implementation-plan.md) | Plan de implementación original | Referencia histórica |
 
 ---
 
@@ -34,26 +41,26 @@ graph TB
     
     subgraph Backend [API Layer]
         API[Next.js API Routes]
-        Middleware[Auth & Billing Middleware]
+        Router[AI Router - Vercel AI SDK]
     end
     
     subgraph External [Servicios Externos]
         Supabase[(Supabase DB + Auth)]
         Stripe[Stripe Payments]
+        Groq[Groq API - Modelos Gratuitos]
         OpenAI[OpenAI API]
         Anthropic[Anthropic API]
-        Google[Google AI API]
     end
     
     UI --> Pages
     Pages --> API
     Pages --> Zustand
-    API --> Middleware
-    Middleware --> Supabase
-    Middleware --> Stripe
-    Middleware --> OpenAI
-    Middleware --> Anthropic
-    Middleware --> Google
+    API --> Router
+    Router --> Groq
+    Router --> OpenAI
+    Router --> Anthropic
+    API --> Supabase
+    API --> Stripe
 ```
 
 ---
@@ -62,452 +69,196 @@ graph TB
 
 ```
 aether-hub/
-├── app/                          # Next.js App Router
-│   ├── (auth)/                   # Grupo de rutas de autenticación
-│   │   ├── login/
-│   │   ├── register/
-│   │   └── layout.tsx
-│   ├── (dashboard)/              # Grupo de rutas protegidas
-│   │   ├── layout.tsx            # Layout principal con sidebar
-│   │   ├── page.tsx              # Dashboard home
-│   │   ├── arena-texto/          # Arena de Texto & Documentos
-│   │   ├── arena-codigo/         # Arena de Codificación
-│   │   ├── arena-multimedia/     # Arena Multimedia
-│   │   ├── pricing/              # Planes y configurador
-│   │   ├── settings/             # Configuración de usuario
-│   │   └── history/              # Historial de sesiones
-│   ├── api/                      # API Routes
-│   │   ├── auth/
-│   │   ├── chat/
-│   │   ├── billing/
-│   │   ├── points/
-│   │   └── models/
-│   └── layout.tsx                # Root layout
-├── components/
-│   ├── ui/                       # Componentes Shadcn UI
-│   ├── layout/                   # Sidebar, Header, Footer
-│   ├── chat/                     # Componentes de chat
-│   ├── arena/                    # Componentes específicos de arenas
-│   ├── billing/                  # Componentes de facturación
-│   └── telemetry/                # Componentes de telemetría
-├── lib/
-│   ├── supabase/                 # Cliente y helpers de Supabase
-│   ├── stripe/                   # Cliente y helpers de Stripe
-│   ├── ai/                       # Wrappers de APIs de IA
-│   ├── points/                   # Lógica de puntos y costos
-│   └── utils.ts                  # Utilidades generales
-├── hooks/                        # Custom hooks de React
-├── stores/                       # Stores de Zustand
-├── types/                        # Tipos TypeScript
-├── prisma/                       # Schema y migraciones
-│   └── schema.prisma
-├── public/
-│   └── assets/
-└── styles/
-    └── globals.css
+├── src/
+│   ├── app/                          # Next.js App Router
+│   │   ├── (auth)/                   # Rutas de autenticación
+│   │   │   ├── login/
+│   │   │   └── register/
+│   │   ├── (dashboard)/              # Rutas protegidas
+│   │   │   ├── layout.tsx            # Layout principal con sidebar
+│   │   │   ├── arena-texto/          # Arena de Texto
+│   │   │   ├── arena-codigo/         # Arena de Código
+│   │   │   ├── arena/                # Arenas multimedia
+│   │   │   │   ├── imagenes/
+│   │   │   │   ├── video/
+│   │   │   │   └── audio/
+│   │   │   ├── pricing/
+│   │   │   ├── configuracion/
+│   │   │   └── historial/
+│   │   ├── api/                      # API Routes
+│   │   │   ├── chat/route.ts         # Endpoint principal de chat
+│   │   │   ├── user/me/route.ts      # Datos de usuario
+│   │   │   ├── auth/
+│   │   │   └── stripe/
+│   │   └── layout.tsx                # Root layout
+│   ├── components/
+│   │   ├── ui/                       # Componentes Shadcn UI
+│   │   ├── layout/                   # Sidebar, Header
+│   │   ├── chat/                     # Componentes de chat
+│   │   ├── telemetry/                # Panel de telemetría
+│   │   ├── pricing/                  # Modal de pricing
+│   │   └── settings/                 # Modal de configuración
+│   ├── lib/
+│   │   ├── supabase/                 # Cliente Supabase
+│   │   ├── prisma.ts                 # Cliente Prisma
+│   │   ├── stripe/                   # Cliente Stripe
+│   │   └── ai/                       # Configuración de IA
+│   ├── stores/                       # Stores de Zustand
+│   │   ├── user-store.ts
+│   │   ├── chat-store.ts
+│   │   └── auth-store.ts
+│   ├── config/
+│   │   ├── ai-models.ts              # Configuración de modelos IA
+│   │   ├── skills.ts                 # Skills/asistentes
+│   │   └── index.ts                  # Exports principales
+│   └── types/
+│       └── index.ts                  # Tipos TypeScript
+├── prisma/
+│   ├── schema.prisma                 # Esquema de base de datos
+│   └── seed.ts                       # Datos iniciales
+└── plans/                            # Documentación
+    ├── aether-hub-architecture.md    # Este archivo
+    ├── ui-design-system.md           # Especificación UI/UX
+    ├── api-routes.md                 # Especificación APIs
+    ├── prisma-schema.md              # Especificación BD/Estado
+    └── implementation-plan.md        # Plan de implementación
 ```
 
 ---
 
-## 🗄️ Modelo de Datos (Prisma Schema)
+## 🎨 Estilo Visual: Material Neon Minimalista
 
-```mermaid
-erDiagram
-    User ||--o{ Subscription : has
-    User ||--o{ Transaction : creates
-    User ||--o{ ChatSession : owns
-    User ||--o{ UserSettings : has
-    ChatSession ||--o{ Message : contains
-    Subscription }o--|| Plan : references
-    Transaction }o--|| PointPackage : references
-    
-    User {
-        string id PK
-        string email UK
-        string password_hash
-        string full_name
-        string avatar_url
-        int points_balance
-        string role
-        datetime created_at
-        datetime updated_at
-    }
-    
-    Subscription {
-        string id PK
-        string user_id FK
-        string plan_id FK
-        string stripe_subscription_id
-        string status
-        datetime current_period_start
-        datetime current_period_end
-        datetime created_at
-    }
-    
-    Plan {
-        string id PK
-        string name
-        string type
-        int points_included
-        float price_monthly
-        json features
-        boolean is_active
-    }
-    
-    Transaction {
-        string id PK
-        string user_id FK
-        string type
-        int points_amount
-        float money_amount
-        string description
-        string stripe_payment_id
-        json metadata
-        datetime created_at
-    }
-    
-    ChatSession {
-        string id PK
-        string user_id FK
-        string arena_type
-        string model_used
-        string skill_mode
-        int total_tokens_used
-        int total_points_spent
-        json context_data
-        datetime created_at
-        datetime updated_at
-    }
-    
-    Message {
-        string id PK
-        string session_id FK
-        string role
-        text content
-        int tokens_used
-        int points_cost
-        json metadata
-        datetime created_at
-    }
-    
-    UserSettings {
-        string id PK
-        string user_id FK
-        int daily_points_limit
-        boolean notifications_enabled
-        string preferred_model
-        json arena_preferences
-        datetime updated_at
-    }
-    
-    PointPackage {
-        string id PK
-        string name
-        int points
-        float price
-        boolean is_popular
-    }
-```
+El diseño sigue el estilo **"Material Neon Minimalista"**:
+
+- **Fondos oscuros** con translucidez estratégica
+- **Acentos violeta tenues** (no invasivos)
+- **Bordes sutiles** (`border-primary-500/10`)
+- **Header ultra minimalista** (sin logo ni perfil)
+- **Perfil integrado en Sidebar** (dropdown inferior)
+
+Ver detalles completos en [`ui-design-system.md`](ui-design-system.md).
 
 ---
 
-## 💰 Sistema de Puntos y Facturación
+## 🤖 Modelos de IA Disponibles
 
-### Conversión de Puntos
+### Modelos Gratuitos (Groq)
+
+| ID | Nombre | Uso Recomendado |
+|----|--------|-----------------|
+| `llama-3.3-70b-versatile` | Llama 3.3 70B | Tareas generales potentes |
+| `llama-3.1-8b-instant` | Llama 3.1 8B | Respuestas rápidas |
+| `qwen/qwen3-32b` | Qwen 3 32B | Razonamiento |
+| `moonshotai/kimi-k2-instruct-0905` | Kimi K2 | Razonamiento avanzado |
+| `openai/gpt-oss-120b` | GPT-OSS 120B | Tareas complejas |
+| `openai/gpt-oss-20b` | GPT-OSS 20B | Tareas medias |
+
+### Modelos Premium (Deshabilitados)
+
+Los modelos de OpenAI, Anthropic y Google están configurados pero deshabilitados hasta que el usuario proporcione su propia API key.
+
+Ver detalles completos en [`api-routes.md`](api-routes.md).
+
+---
+
+## 💰 Sistema de Puntos
+
+### Conversión
 
 ```
-1 Punto = $0.001 USD (0.1 centavos)
-1,000 Puntos = $1.00 USD
+1 Punto = $0.001 USD
 10,000 Puntos = $10.00 USD
 ```
 
-### Costos por Modelo (Ejemplo)
+### Puntos de Bienvenida
 
-| Modelo | Input (pts/1K tokens) | Output (pts/1K tokens) |
-|--------|----------------------|------------------------|
-| GPT-4o | 2.5 | 10.0 |
-| GPT-4o-mini | 0.15 | 0.6 |
-| Claude 3.5 Sonnet | 3.0 | 15.0 |
-| Claude 3 Haiku | 0.25 | 1.25 |
-| Gemini Pro | 0.5 | 1.5 |
+- **Nuevo usuario:** 10,000 puntos gratis
+- **Límite diario por defecto:** 10,000 puntos
 
-### Flujo de Facturación
+### Reglas Críticas
+
+1. **Fallback 200:** `/api/user/me` NUNCA devuelve 404 para usuarios autenticados
+2. **Null-Checks obligatorios:** Todo acceso a datos de usuario debe ser null-safe
+3. **Sanitización de mensajes:** Siempre sanitizar antes de enviar a Groq
+
+Ver detalles completos en [`prisma-schema.md`](prisma-schema.md).
+
+---
+
+## 🚀 Reglas de Oro del Desarrollo
+
+| Regla | Descripción |
+|-------|-------------|
+| 🚫 **No modificar UI sin consultar** | La interfaz está aprobada por el usuario |
+| ✅ **IDs de modelos exactos** | Usar los IDs exactos de [`api-routes.md`](api-routes.md) |
+| ✅ **Null-checks obligatorios** | Patrones en [`prisma-schema.md`](prisma-schema.md) |
+| ✅ **Sanitización de payload** | Siempre antes de `streamText()` |
+| ✅ **Fallback 200** | En endpoints de usuario |
+
+---
+
+## 📊 Diagramas de Flujo
+
+### Flujo de Chat
 
 ```mermaid
 sequenceDiagram
     participant U as Usuario
-    participant FE as Frontend
-    participant API as API Route
-    participant MW as Billing Middleware
-    participant DB as Supabase
-    participant AI as AI Provider
-    
-    U->>FE: Envía mensaje
-    FE->>API: POST /api/chat
-    API->>MW: Intercepta petición
-    MW->>DB: Verificar saldo puntos
-    alt Saldo insuficiente
-        MW-->>FE: Error: Saldo insuficiente
-        FE-->>U: Muestra modal recarga
-    else Saldo suficiente
-        MW->>AI: Ejecuta petición AI
-        AI-->>MW: Respuesta + tokens usados
-        MW->>DB: Descuenta puntos
-        MW->>DB: Registra transacción
-        MW-->>API: Respuesta procesada
-        API-->>FE: Respuesta + métricas
-        FE-->>U: Muestra respuesta + costo
+    participant F as Frontend
+    participant A as API /chat
+    participant D as Database
+    participant G as Groq API
+
+    U->>F: Escribe mensaje
+    F->>A: POST /api/chat {messages, modelId}
+    A->>D: Verificar usuario y límite
+    alt Límite OK
+        A->>A: Sanitizar mensajes
+        A->>G: streamText()
+        G-->>A: SSE Stream
+        A-->>F: SSE Stream
+        F-->>U: Mostrar respuesta
+        A->>D: Registrar uso
+    else Límite excedido
+        A-->>F: 402 Payment Required
+        F-->>U: Modal de upgrade
     end
 ```
 
----
+### Flujo de Autenticación
 
-## 🎨 Sistema de Diseño
+```mermaid
+sequenceDiagram
+    participant U as Usuario
+    participant F as Frontend
+    participant S as Supabase Auth
+    participant A as API /user/me
+    participant D as Prisma
 
-### Tokens de Diseño
-
-```css
-:root {
-  /* Colores primarios - Violeta */
-  --primary-50: #faf5ff;
-  --primary-100: #f3e8ff;
-  --primary-200: #e9d5ff;
-  --primary-300: #d8b4fe;
-  --primary-400: #c084fc;
-  --primary-500: #a855f7;
-  --primary-600: #9333ea;
-  --primary-700: #7c3aed;
-  --primary-800: #6b21a8;
-  --primary-900: #581c87;
-
-  /* Background oscuro */
-  --bg-primary: #0f0f1a;
-  --bg-secondary: #1a1a2e;
-  --bg-tertiary: #16213e;
-  --bg-card: #1e1e32;
-  --bg-elevated: #252542;
-
-  /* Texto */
-  --text-primary: #ffffff;
-  --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
-
-  /* Estados */
-  --success: #22c55e;
-  --warning: #eab308;
-  --error: #ef4444;
-  --info: #3b82f6;
-}
-```
-
-### Componentes UI Principales
-
-1. **Sidebar de Navegación**
-   - Logo Aether
-   - Enlaces a Arenas
-   - Saldo de puntos (tiempo real)
-   - Perfil de usuario
-
-2. **Header**
-   - Breadcrumb de navegación
-   - Selector de modelo activo
-   - Notificaciones
-   - Toggle de tema
-
-3. **Context Window Bar**
-   - Barra de progreso animada
-   - Indicadores de color (verde/amarillo/rojo)
-   - Contador de tokens
-
-4. **Chat Interface**
-   - Área de mensajes con scroll
-   - Input con contador de tokens
-   - Selector de Skill/Modo
-   - Botón de envío con indicador de costo
-
----
-
-## 🔌 API Routes
-
-### Autenticación
-- `POST /api/auth/register` - Registro de usuario
-- `POST /api/auth/login` - Inicio de sesión
-- `POST /api/auth/logout` - Cerrar sesión
-- `GET /api/auth/session` - Obtener sesión actual
-
-### Chat
-- `POST /api/chat/completions` - Enviar mensaje
-- `GET /api/chat/sessions` - Listar sesiones
-- `GET /api/chat/sessions/:id` - Obtener sesión
-- `DELETE /api/chat/sessions/:id` - Eliminar sesión
-
-### Facturación
-- `GET /api/billing/plans` - Obtener planes disponibles
-- `POST /api/billing/subscribe` - Crear suscripción
-- `POST /api/billing/checkout` - Checkout para puntos
-- `POST /api/billing/webhook` - Webhook de Stripe
-- `GET /api/billing/transactions` - Historial de transacciones
-
-### Puntos
-- `GET /api/points/balance` - Saldo actual
-- `GET /api/points/usage` - Uso del período
-- `POST /api/points/purchase` - Comprar puntos
-
-### Modelos
-- `GET /api/models` - Listar modelos disponibles
-- `GET /api/models/:id/pricing` - Precios de modelo
-
----
-
-## 📊 Módulos de Arena
-
-### Arena de Texto & Documentos
-
-**Skills/Modos disponibles:**
-- `assistant` - Asistente Estándar
-- `creative` - Poeta/Creativo
-- `academic` - Redactor Académico
-- `casual` - Tono Coloquial
-- `seo` - Experto SEO
-- `summarizer` - Resumidor Ejecutivo
-
-### Arena de Codificación (Dev Hub)
-
-**Modos disponibles:**
-- `architect` - Arquitecto de Software
-- `debugger` - Depurador de Errores
-- `optimizer` - Optimizador de Rendimiento
-- `tester` - Generador de Tests
-
-**Características:**
-- Editor Monaco integrado
-- Syntax highlighting
-- Detección de lenguaje automática
-
-### Arena Multimedia
-
-**Sub-módulos:**
-- `image` - Generación de Imágenes (DALL-E, Stable Diffusion)
-- `video` - Generación de Video
-- `audio` - Generación de Audio
-
-**Controles:**
-- Aspect ratio slider
-- Style presets
-- Seed input
-- Galería de resultados
-
----
-
-## 🔐 Seguridad y Límites
-
-### Hard Limits de Usuario
-
-```typescript
-interface UserLimits {
-  dailyPointsLimit: number;      // Tope diario de gasto
-  sessionTokensLimit: number;     // Límite de tokens por sesión
-  rateLimitPerMinute: number;     // Peticiones por minuto
-}
-```
-
-### Middleware de Protección
-
-```typescript
-// Pseudocódigo del middleware
-async function billingMiddleware(request, user) {
-  const model = request.model;
-  const estimatedTokens = estimateTokens(request.messages);
-  const estimatedCost = calculateCost(model, estimatedTokens);
-  
-  // Verificar límite diario
-  const dailyUsage = await getDailyUsage(user.id);
-  if (dailyUsage + estimatedCost > user.dailyLimit) {
-    throw new DailyLimitExceededError();
-  }
-  
-  // Verificar saldo
-  if (user.pointsBalance < estimatedCost) {
-    throw new InsufficientPointsError();
-  }
-  
-  return { proceed: true, estimatedCost };
-}
+    U->>F: Login
+    F->>S: Autenticar
+    S-->>F: Sesión creada
+    F->>A: GET /api/user/me
+    A->>D: Buscar usuario
+    alt No existe
+        A->>D: Crear usuario + 10,000 pts
+        D-->>A: Usuario creado
+    end
+    A-->>F: Datos del usuario
+    F->>F: Actualizar Zustand
 ```
 
 ---
 
-## 📈 Métricas y Telemetría
+## 📝 Mantenimiento
 
-### Dashboard de Sesión
+### Cuándo actualizar la documentación:
 
-```typescript
-interface SessionTelemetry {
-  contextUsed: number;           // Tokens de contexto usados
-  contextLimit: number;          // Límite del modelo
-  contextPercentage: number;     // Porcentaje de uso
-  lastRequestCost: number;       // Costo última petición
-  totalSessionCost: number;      // Costo total de sesión
-  currentModel: string;          // Modelo activo
-  currentSkill: string;          // Skill activo
-}
-```
-
-### Alertas de Contexto
-
-| Porcentaje | Color | Acción |
-|------------|-------|--------|
-| 0-75% | Verde | Normal |
-| 75-90% | Amarillo | Advertencia visual |
-| 90-100% | Rojo | Alerta crítica + sugerencia |
+1. **Nuevos modelos de IA** → Actualizar [`api-routes.md`](api-routes.md)
+2. **Cambios de layout/componentes** → Actualizar [`ui-design-system.md`](ui-design-system.md)
+3. **Cambios de esquema BD** → Actualizar [`prisma-schema.md`](prisma-schema.md)
+4. **Nuevos endpoints** → Actualizar [`api-routes.md`](api-routes.md)
 
 ---
 
-## 🚀 Fases de Implementación
-
-### FASE 1: Inicialización y Setup ✅
-- [ ] Crear proyecto Next.js
-- [ ] Configurar Tailwind CSS
-- [ ] Instalar Shadcn UI
-- [ ] Configurar estructura de carpetas
-- [ ] Setup de Supabase
-- [ ] Configurar Prisma
-
-### FASE 2: Modelado de Datos
-- [ ] Crear schema de Prisma
-- [ ] Configurar migraciones
-- [ ] Seed de datos iniciales
-- [ ] Configurar autenticación Supabase
-
-### FASE 3: UI/UX Core
-- [ ] Layout principal dark mode
-- [ ] Sidebar de navegación
-- [ ] Header con saldo
-- [ ] Página de dashboard
-
-### FASE 4: Motor de Chat
-- [ ] Interfaz de chat
-- [ ] Barra de contexto
-- [ ] Selector de modelos
-- [ ] Selector de skills
-
-### FASE 5: Sistema de Facturación
-- [ ] Middleware de puntos
-- [ ] Integración Stripe
-- [ ] Webhooks
-- [ ] Transacciones
-
-### FASE 6: Configurador de Packs
-- [ ] Página de pricing
-- [ ] Configurador interactivo
-- [ ] Checkout flow
-
----
-
-## 📝 Notas Adicionales
-
-- **Internacionalización:** Preparar para i18n desde el inicio
-- **Accesibilidad:** Cumplir WCAG 2.1 AA
-- **SEO:** Metadata dinámica por página
-- **Testing:** Jest + Testing Library + Playwright
-- **CI/CD:** GitHub Actions para deploy automático
+*Última actualización: Febrero 2026 - Auditoría Arquitectónica y Sincronización de Fuente de Verdad*

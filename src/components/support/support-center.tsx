@@ -8,6 +8,7 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import {
@@ -102,6 +103,7 @@ export function SupportCenter({ open, onOpenChange }: SupportCenterProps) {
       <DialogContent className="max-w-3xl h-[85vh] p-0 bg-background border-primary-500/20 overflow-hidden">
         <VisuallyHidden>
           <DialogTitle>Centro de Soporte de Aether</DialogTitle>
+          <DialogDescription>Encuentra respuestas a preguntas frecuentes, tutoriales y contacta con soporte técnico.</DialogDescription>
         </VisuallyHidden>
         {/* Header */}
         <div className="p-6 border-b border-primary-500/10">

@@ -22,7 +22,7 @@ model User {
   fullName      String?
   avatarUrl     String?
   role          UserRole  @default(USER)
-  pointsBalance Int       @default(0)
+  pointsBalance Int       @default(10000)
   isActive      Boolean   @default(true)
   stripeCustomerId String? @unique
   createdAt     DateTime  @default(now())

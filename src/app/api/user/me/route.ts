@@ -5,48 +5,24 @@ import { prisma } from '@/lib/prisma'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-// Mock user data for development/demo mode when no auth is present
-const MOCK_USER = {
-  user: {
-    id: 'user_demo_123',
-    email: 'demo@aether.local',
-    fullName: 'Usuario Demo',
-    avatarUrl: null,
-    role: 'USER',
-    pointsBalance: 10000,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-  },
-  subscription: null,
-  settings: {
-    dailyPointsLimit: 10000,
-    sessionTokensLimit: 100000,
-    preferredModel: 'llama-3.1-8b-instant',
-    theme: 'dark',
-    language: 'es',
-  },
-  points: {
-    balance: 10000,
-    dailyUsage: 0,
-    dailyLimit: 10000,
-    remainingToday: 10000,
-  }
-}
+// Puntos de bienvenida para nuevos usuarios
+const WELCOME_BONUS_POINTS = 10000
 
 export async function GET() {
   try {
-    // Verify authentication
+    // Verificar autenticación con Supabase
     const authUser = await getAuthUser()
     
-    // If no auth user, return mock data for demo/development
-    // This allows the frontend to work without authentication
+    // Si no hay usuario autenticado, devolver 401
     if (!authUser) {
-      console.log('[/api/user/me] No auth user, returning mock data for demo mode')
-      return NextResponse.json(MOCK_USER)
+      return NextResponse.json(
+        { error: 'Unauthorized', code: 'AUTH_REQUIRED' },
+        { status: 401 }
+      )
     }
 
-    // Get user data with subscription and settings
-    const user = await prisma.user.findUnique({
+    // Buscar usuario en la base de datos Prisma
+    let user = await prisma.user.findUnique({
       where: { id: authUser.id },
       select: {
         id: true,
@@ -84,14 +60,89 @@ export async function GET() {
       }
     })
 
+    // Si el usuario existe en Supabase Auth pero NO en Prisma, crearlo
     if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
+      console.log(`[API /user/me] Usuario ${authUser.id} no encontrado en Prisma, creando...`)
+      
+      try {
+        // Crear usuario en Prisma con puntos de bienvenida
+        user = await prisma.user.create({
+          data: {
+            id: authUser.id,
+            email: authUser.email || `user_${authUser.id}@aether.local`,
+            fullName: authUser.user_metadata?.full_name || authUser.user_metadata?.name || null,
+            avatarUrl: authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || null,
+            pointsBalance: WELCOME_BONUS_POINTS,
+            role: 'USER',
+            isActive: true,
+            settings: {
+              create: {
+                dailyPointsLimit: 10000,
+                sessionTokensLimit: 100000,
+                preferredModel: 'llama-3.1-8b-instant',
+                theme: 'dark',
+                language: 'es',
+              }
+            }
+          },
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            avatarUrl: true,
+            role: true,
+            pointsBalance: true,
+            isActive: true,
+            createdAt: true,
+            subscription: {
+              select: {
+                id: true,
+                status: true,
+                currentPeriodEnd: true,
+                plan: {
+                  select: {
+                    id: true,
+                    name: true,
+                    slug: true,
+                    pointsIncluded: true,
+                  }
+                }
+              }
+            },
+            settings: {
+              select: {
+                dailyPointsLimit: true,
+                sessionTokensLimit: true,
+                preferredModel: true,
+                theme: true,
+                language: true,
+              }
+            }
+          }
+        })
+
+        // Crear transacción de bono de bienvenida
+        await prisma.transaction.create({
+          data: {
+            userId: user.id,
+            type: 'BONUS',
+            pointsAmount: WELCOME_BONUS_POINTS,
+            description: 'Bono de bienvenida - 10,000 puntos gratis',
+            metadata: { type: 'welcome_bonus' }
+          }
+        })
+
+        console.log(`[API /user/me] Usuario ${authUser.id} creado exitosamente con ${WELCOME_BONUS_POINTS} puntos de bienvenida`)
+      } catch (createError) {
+        console.error('[API /user/me] Error creando usuario en Prisma:', createError)
+        return NextResponse.json(
+          { error: 'Error creating user profile', code: 'USER_CREATE_ERROR' },
+          { status: 500 }
+        )
+      }
     }
 
-    // Calculate daily usage
+    // Calcular uso diario
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     
@@ -107,7 +158,7 @@ export async function GET() {
     const dailyUsed = Math.abs(todayUsage._sum.pointsAmount || 0)
     const dailyLimit = user.settings?.dailyPointsLimit || 10000
 
-    // Build response
+    // Construir respuesta
     const response = {
       user: {
         id: user.id,
@@ -131,9 +182,9 @@ export async function GET() {
 
     return NextResponse.json(response)
   } catch (error) {
-    console.error('Error fetching user data:', error)
+    console.error('[API /user/me] Error fetching user data:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', code: 'INTERNAL_ERROR' },
       { status: 500 }
     )
   }

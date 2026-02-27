@@ -7,6 +7,7 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import {
@@ -124,6 +125,7 @@ export function PricingModal({ open, onOpenChange }: PricingModalProps) {
       <DialogContent className="max-w-5xl h-[90vh] p-0 bg-background border-primary-500/20 overflow-hidden">
         <VisuallyHidden>
           <DialogTitle>Planes y Precios de Aether</DialogTitle>
+          <DialogDescription>Elige entre los planes Gratuito, Premium y Pro para acceder a diferentes modelos de IA y características.</DialogDescription>
         </VisuallyHidden>
         {/* Header */}
         <div className="relative bg-gradient-to-b from-primary-500/10 to-transparent p-6 border-b border-primary-500/10">

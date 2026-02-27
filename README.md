@@ -2,30 +2,48 @@
 
 **Tu Centro Universal de Inteligencia Artificial**
 
-Aether Hub es una plataforma SaaS que unifica múltiples APIs de IA (OpenAI, Anthropic, Google) bajo una sola interfaz elegante, con un sistema de facturación basado en puntos.
+Aether Hub es una plataforma SaaS que unifica múltiples APIs de IA bajo una sola interfaz elegante, con un sistema de facturación basado en puntos y un diseño "Material Neon Minimalista".
 
-![Aether Hub](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)
+![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=flat-square&logo=typescript)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC?style=flat-square&logo=tailwind-css)
 ![Prisma](https://img.shields.io/badge/Prisma-5.0-2D3748?style=flat-square&logo=prisma)
+![Groq](https://img.shields.io/badge/Groq-API-orange?style=flat-square)
 
 ## ✨ Características
 
-### 🤖 Múltiples Proveedores de IA
-- **OpenAI**: GPT-4o, GPT-4o Mini, GPT-4 Turbo, GPT-3.5, o1 Preview, o1 Mini
-- **Anthropic**: Claude 3.5 Sonnet, Claude 3.5 Haiku, Claude 3 Opus
-- **Google**: Gemini 2.0 Flash, Gemini 1.5 Pro, Gemini 1.5 Flash
+### 🤖 Modelos de IA Disponibles
+
+#### Gratuitos (Groq - Inferencia Ultra-Rápida)
+| Modelo | Contexto | Descripción |
+|--------|----------|-------------|
+| Llama 3.3 70B | 128K tokens | Modelo principal, razonamiento avanzado |
+| Llama 3.1 8B Instant | 128K tokens | Respuestas rápidas y eficientes |
+| Qwen 3 32B | 128K tokens | Excelente para tareas generales |
+| Kimi K2 Instruct | 128K tokens | Especializado en razonamiento |
+| GPT-OSS 120B | 128K tokens | Razonamiento medio |
+| GPT-OSS 20B | 128K tokens | Razonamiento medio |
+| Mixtral 8x7B | 32K tokens | Tareas generales |
+| Gemma 2 9B | 8K tokens | Compacto y eficiente |
+
+#### Premium (Requiere API Key propia)
+- **OpenAI**: GPT-4o, GPT-4 Turbo, o1 Preview/Mini
+- **Anthropic**: Claude 3.5 Sonnet, Claude 3 Opus
+- **Google**: Gemini 1.5 Pro/Flash (contexto de 1M tokens)
 
 ### 💰 Sistema de Puntos
+- **Bonus de bienvenida**: 10,000 puntos gratuitos
 - 1 Punto = $0.001 USD
 - Transparencia total en costos
 - Telemetría en tiempo real del uso de contexto
 - Límites diarios configurables
 
-### 🎨 Diseño Arcano-Tecnológico
-- Tema oscuro elegante con acentos violeta (#7c3aed)
+### 🎨 Diseño Material Neon Minimalista
+- Tema oscuro elegante con acentos violeta (#9D4EDD)
 - Glassmorphism y efectos sutiles
+- Layout "Holy Grail" con Sidebar + Header + Main
 - Interfaz responsive y accesible
+- Tipografía: Inter (UI) + Playfair Display (títulos) + JetBrains Mono (código)
 
 ### 🔐 Autenticación Completa
 - Email/Contraseña con Supabase Auth
@@ -37,42 +55,73 @@ Aether Hub es una plataforma SaaS que unifica múltiples APIs de IA (OpenAI, Ant
 - Paquetes de puntos one-time
 - Portal de cliente para gestión de suscripciones
 
+## 📚 Documentación
+
+La documentación técnica detallada se encuentra en la carpeta [`plans/`](plans/):
+
+| Documento | Descripción |
+|-----------|-------------|
+| [Arquitectura](plans/aether-hub-architecture.md) | Visión general, diagramas y referencia rápida |
+| [Sistema de Diseño UI](plans/ui-design-system.md) | "Material Neon Minimalista", componentes y layouts |
+| [API Routes](plans/api-routes.md) | Endpoints, Vercel AI SDK, modelos Groq |
+| [Base de Datos](plans/prisma-schema.md) | Schema Prisma, stores Zustand, patrones |
+| [Plan de Implementación](plans/implementation-plan.md) | Roadmap y tareas pendientes |
+
 ## 🏗️ Arquitectura
 
 ```
 src/
-├── app/                    # Next.js App Router
-│   ├── (auth)/            # Rutas de autenticación
-│   │   ├── login/
-│   │   └── register/
-│   ├── (dashboard)/       # Rutas protegidas
-│   │   ├── arena-texto/   # Chat de texto
-│   │   └── pricing/       # Planes y precios
-│   ├── api/               # API Routes
-│   │   ├── auth/
-│   │   ├── chat/
-│   │   └── stripe/
-│   └── auth/callback/
+├── app/                          # Next.js App Router
+│   ├── (auth)/                   # Rutas de autenticación
+│   │   ├── login/                # Página de login
+│   │   └── register/             # Página de registro
+│   ├── (dashboard)/              # Rutas protegidas
+│   │   ├── arena-texto/          # Chat de texto principal
+│   │   ├── arena-codigo/         # Arena de código
+│   │   ├── arena/                # Arenas multimedia
+│   │   │   ├── audio/            # Generación de audio
+│   │   │   ├── imagenes/         # Generación de imágenes
+│   │   │   └── video/            # Generación de video
+│   │   ├── dashboard/            # Dashboard principal
+│   │   ├── historial/            # Historial de chats
+│   │   ├── configuracion/        # Configuración de usuario
+│   │   └── pricing/              # Planes y precios
+│   ├── api/                      # API Routes
+│   │   ├── auth/logout/          # Cerrar sesión
+│   │   ├── chat/                 # Chat con IA (streaming)
+│   │   ├── user/me/              # Datos de usuario
+│   │   └── stripe/               # Webhooks y checkout
+│   └── auth/callback/            # Callback OAuth
 ├── components/
-│   ├── ui/                # Componentes base (shadcn-style)
-│   ├── layout/            # Sidebar, Header
-│   ├── chat/              # ChatInterface
-│   ├── telemetry/         # ContextBar, TelemetryPanel
-│   └── billing/           # PricingCard
+│   ├── ui/                       # Componentes base (shadcn-style)
+│   ├── layout/                   # Sidebar, Header
+│   ├── chat/                     # ChatInterface, MessageBubble
+│   ├── telemetry/                # ContextBar, TelemetryPanel
+│   ├── billing/                  # PricingCard
+│   ├── settings/                 # SettingsModal
+│   └── providers/                # StoresProvider
 ├── lib/
-│   ├── ai/                # Integración de proveedores IA
-│   │   ├── providers/     # OpenAI, Anthropic, Google
-│   │   ├── registry.ts    # Registro centralizado
-│   │   └── chat-service.ts
-│   ├── billing/           # Middleware de facturación
-│   ├── points/            # Calculadora de puntos
-│   ├── stripe/            # Cliente Stripe
-│   ├── supabase/          # Clientes Supabase
-│   └── prisma.ts          # Cliente Prisma
-├── stores/                # Estado global (Zustand)
-│   ├── auth-store.ts
-│   └── chat-store.ts
-└── types/                 # Tipos TypeScript
+│   ├── ai/                       # Integración de proveedores IA
+│   │   ├── providers/            # OpenAI, Anthropic, Google, Groq
+│   │   ├── registry.ts           # Registro centralizado
+│   │   └── chat-service.ts       # Servicio de chat
+│   ├── billing/                  # Middleware de facturación
+│   ├── points/                   # Calculadora de puntos
+│   ├── stripe/                   # Cliente Stripe
+│   ├── supabase/                 # Clientes Supabase
+│   └── prisma.ts                 # Cliente Prisma
+├── stores/                       # Estado global (Zustand)
+│   ├── auth-store.ts             # Estado de autenticación
+│   ├── user-store.ts             # Estado de usuario
+│   └── chat-store.ts             # Estado del chat
+├── config/                       # Configuración centralizada
+│   ├── ai-models.ts              # Modelos de IA disponibles
+│   ├── skills.ts                 # Habilidades especiales
+│   └── index.ts                  # Exports principales
+├── hooks/                        # Custom hooks
+│   └── use-toast.ts              # Sistema de notificaciones
+└── types/                        # Tipos TypeScript
+    └── index.ts                  # Tipos globales
 ```
 
 ## 🚀 Inicio Rápido
@@ -81,8 +130,8 @@ src/
 
 - Node.js 18+
 - PostgreSQL (o Supabase)
-- Cuentas en OpenAI, Anthropic, Google AI
-- Cuenta en Stripe
+- Cuenta en Groq (gratuito)
+- Cuenta en Stripe (opcional, para pagos)
 
 ### Instalación
 
@@ -103,10 +152,33 @@ cp .env.example .env.local
 ```
 
 Edita `.env.local` con tus credenciales:
-- `DATABASE_URL`: URL de PostgreSQL
-- `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Credenciales de Supabase
-- `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_AI_API_KEY`: APIs de IA
-- `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`: Credenciales de Stripe
+
+```env
+# Base de datos
+DATABASE_URL="postgresql://..."
+DIRECT_URL="postgresql://..."
+
+# Supabase (Autenticación)
+NEXT_PUBLIC_SUPABASE_URL="https://xxx.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="eyJ..."
+
+# Groq (Requerido - Modelos gratuitos)
+GROQ_API_KEY="gsk_..."
+
+# OpenAI (Opcional - Modelos premium)
+OPENAI_API_KEY="sk-..."
+
+# Anthropic (Opcional - Modelos premium)
+ANTHROPIC_API_KEY="sk-ant-..."
+
+# Google AI (Opcional)
+GOOGLE_AI_API_KEY="AI..."
+
+# Stripe (Opcional - Pagos)
+STRIPE_SECRET_KEY="sk_..."
+STRIPE_WEBHOOK_SECRET="whsec_..."
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_..."
+```
 
 4. **Inicializar la base de datos**
 ```bash
@@ -125,24 +197,28 @@ Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
 
 ### Usuario
 - Autenticación con Supabase
-- Balance de puntos
+- Balance de puntos (10,000 de bienvenida)
 - Configuración de límites diarios
+- Roles: USER, ADMIN, MODERATOR
 
 ### Suscripción
 - Planes: Starter, Pro, Enterprise
-- Estados: Active, Canceled, Past Due
+- Estados: Active, Canceled, Past Due, Trialing
 - Integración con Stripe
 
 ### Sesiones de Chat
 - Historial de mensajes
 - Uso de tokens y puntos
 - Metadatos de modelo usado
+- Soporte para múltiples arenas (texto, código, imagen, audio, video)
 
 ## 🔌 API Endpoints
 
 ### Chat
-- `POST /api/chat` - Enviar mensaje al modelo de IA
-- `GET /api/chat` - Obtener modelos disponibles
+- `POST /api/chat` - Enviar mensaje al modelo de IA (streaming)
+
+### Usuario
+- `GET /api/user/me` - Obtener datos del usuario autenticado
 
 ### Autenticación
 - `POST /api/auth/logout` - Cerrar sesión
@@ -177,6 +253,20 @@ npm run start
 2. Configura las variables de entorno
 3. Despliega automáticamente
 
+## 🛠️ Scripts Disponibles
+
+| Comando | Descripción |
+|---------|-------------|
+| `npm run dev` | Servidor de desarrollo |
+| `npm run build` | Build de producción |
+| `npm run start` | Servidor de producción |
+| `npm run lint` | Linter ESLint |
+| `npm run db:generate` | Generar cliente Prisma |
+| `npm run db:push` | Sincronizar schema con BD |
+| `npm run db:migrate` | Crear migración |
+| `npm run db:studio` | Abrir Prisma Studio |
+| `npm run db:seed` | Poblar BD con datos iniciales |
+
 ## 🤝 Contribuir
 
 1. Fork el repositorio
@@ -191,13 +281,16 @@ Este proyecto está bajo la Licencia All Rights Reserved. Ver [LICENSE](LICENSE)
 
 ## 🙏 Agradecimientos
 
+- [Groq](https://groq.com/) por la inferencia ultra-rápida gratuita
 - [OpenAI](https://openai.com/) por GPT
 - [Anthropic](https://anthropic.com/) por Claude
 - [Google](https://ai.google/) por Gemini
 - [Supabase](https://supabase.com/) por la infraestructura
 - [Stripe](https://stripe.com/) por los pagos
-- [Vercel](https://vercel.com/) por el hosting
+- [Vercel](https://vercel.com/) por el hosting y Vercel AI SDK
 
 ---
 
-**Hecho con 💜 por el equipo de Aether Hub**
+<p align="center">
+  <strong>Documentación técnica detallada en <a href="plans/">plans/</a></strong>
+</p>

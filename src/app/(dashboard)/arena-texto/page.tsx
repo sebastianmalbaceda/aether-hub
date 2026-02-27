@@ -3,14 +3,6 @@
 import { useState, useRef, useCallback } from 'react'
 import { Card } from '@/components/ui/card'
 import { ChatInterface } from '@/components/chat/chat-interface'
-import { ContextBar } from '@/components/telemetry/context-bar'
-import { TelemetryPanel } from '@/components/telemetry/telemetry-panel'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
-import { PanelRight, SlidersHorizontal } from 'lucide-react'
-import { useChatStore, selectFormattedContextUsage, selectContextStatus } from '@/stores/chat-store'
-import { useUserStore } from '@/stores/user-store'
-import { estimateTokens } from '@/config'
-import { cn } from '@/lib/utils'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,13 +13,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Button } from '@/components/ui/button'
+import { useChatStore } from '@/stores/chat-store'
+import { useUserStore } from '@/stores/user-store'
+import { estimateTokens } from '@/config'
 
 export default function ArenaTextoPage() {
   // Chat store
   const messages = useChatStore((state) => state.messages)
   const selectedModelId = useChatStore((state) => state.selectedModelId)
-  const telemetry = useChatStore((state) => state.telemetry)
   const isStreaming = useChatStore((state) => state.isStreaming)
   const isSending = useChatStore((state) => state.isSending)
   const error = useChatStore((state) => state.error)
@@ -41,20 +34,11 @@ export default function ArenaTextoPage() {
   const updateTelemetryAfterResponse = useChatStore((state) => state.updateTelemetryAfterResponse)
   const clearSession = useChatStore((state) => state.clearSession)
   
-  // Derived values
-  const formattedContextUsage = useChatStore(selectFormattedContextUsage)
-  const contextStatus = useChatStore(selectContextStatus)
-  
   // User store
-  const pointsBalance = useUserStore((state) => state.pointsBalance)
   const deductPoints = useUserStore((state) => state.deductPoints)
   
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [panelOpen, setPanelOpen] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)
-  
-  // Estado para mostrar telemetría avanzada
-  const [showAdvancedStats, setShowAdvancedStats] = useState(false)
   
   // Estado para modo incógnito
   const [incognitoMode, setIncognitoMode] = useState(false)
@@ -62,6 +46,12 @@ export default function ArenaTextoPage() {
   // Send message to API
   const handleSendMessage = useCallback(async (content: string) => {
     if (!content.trim() || isStreaming || isSending) return
+    
+    // Verificar que hay un modelo seleccionado
+    if (!selectedModelId) {
+      setError('Por favor, selecciona un modelo antes de enviar un mensaje.')
+      return
+    }
     
     setError(null)
     
@@ -100,18 +90,24 @@ export default function ArenaTextoPage() {
         { role: 'user' as const, content: content.trim() },
       ]
       
+      // CORRECCIÓN: Usar modelId en lugar de model
+      // El endpoint /api/chat espera { messages, modelId, skillId }
+      console.log('[arena-texto] Enviando petición con modelId:', selectedModelId)
+      
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: apiMessages,
-          model: selectedModelId,
+          modelId: selectedModelId, // CORREGIDO: era "model", ahora "modelId"
         }),
         signal: abortControllerRef.current.signal,
       })
       
       if (!response.ok) {
-        throw new Error('Error en la respuesta del servidor')
+        const errorData = await response.json().catch(() => ({}))
+        console.error('[arena-texto] Error en respuesta:', response.status, errorData)
+        throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`)
       }
       
       const reader = response.body?.getReader()
@@ -206,44 +202,6 @@ export default function ArenaTextoPage() {
     <div className="flex h-full w-full overflow-hidden">
       {/* CENTRO: Área del Chat */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0 animate-in fade-in duration-500">
-        {/* Context Bar - Solo si showAdvancedStats */}
-        {showAdvancedStats && (
-          <div className="mx-auto w-full max-w-4xl px-4 sm:px-6 py-2 border-b border-border/50 bg-background/50 backdrop-blur-sm">
-            <ContextBar
-              used={telemetry.contextUsed}
-              limit={telemetry.contextLimit}
-              status={contextStatus}
-            />
-          </div>
-        )}
-        
-        {/* Toggle Stats Button - Floating */}
-        <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
-          <Button
-            variant={showAdvancedStats ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setShowAdvancedStats(!showAdvancedStats)}
-            className={cn(
-              "h-8 gap-2 transition-all duration-200 bg-background/80 backdrop-blur-sm",
-              showAdvancedStats && "text-primary-400 bg-primary-500/10"
-            )}
-            title="Mostrar telemetría"
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-            <span className="hidden sm:inline">Stats</span>
-          </Button>
-          
-          {/* Mobile panel toggle */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setPanelOpen(true)}
-            className="h-8 xl:hidden bg-background/80 backdrop-blur-sm"
-          >
-            <PanelRight className="h-4 w-4" />
-          </Button>
-        </div>
-        
         {/* Chat Interface */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden">
           <div className="mx-auto w-full max-w-4xl h-full">
@@ -292,24 +250,6 @@ export default function ArenaTextoPage() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-
-      {/* Panel de Telemetría - Solo si showAdvancedStats */}
-      {showAdvancedStats && (
-        <div className="hidden xl:flex w-80 shrink-0 border-l border-border/50 bg-background-secondary/30 overflow-y-auto">
-          <TelemetryPanel />
-        </div>
-      )}
-
-      {/* Mobile Right Panel */}
-      <Sheet open={panelOpen} onOpenChange={setPanelOpen}>
-        <SheetContent side="right" className="w-80 p-0 max-w-[85vw] bg-popover/95 backdrop-blur-xl">
-          <SheetHeader className="sr-only">
-            <SheetTitle>Panel de telemetría</SheetTitle>
-            <SheetDescription>Información de uso y estadísticas</SheetDescription>
-          </SheetHeader>
-          <TelemetryPanel />
-        </SheetContent>
-      </Sheet>
     </div>
   )
 }

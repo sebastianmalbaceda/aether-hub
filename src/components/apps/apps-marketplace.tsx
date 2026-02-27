@@ -7,6 +7,7 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import {
@@ -126,6 +127,7 @@ export function AppsMarketplace({ open, onOpenChange }: AppsMarketplaceProps) {
       <DialogContent className="max-w-4xl h-[85vh] p-0 bg-background border-primary-500/20 overflow-hidden">
         <VisuallyHidden>
           <DialogTitle>Marketplace de Apps de Aether</DialogTitle>
+          <DialogDescription>Descarga aplicaciones de escritorio, extensiones de navegador y plugins para integrar Aether en tu flujo de trabajo.</DialogDescription>
         </VisuallyHidden>
         {/* Header */}
         <div className="p-6 border-b border-primary-500/10">

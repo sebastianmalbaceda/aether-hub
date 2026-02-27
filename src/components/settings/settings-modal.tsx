@@ -8,6 +8,7 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import {
@@ -96,6 +97,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       <DialogContent className="max-w-4xl h-[85vh] p-0 bg-background border-primary-500/20 overflow-hidden">
         <VisuallyHidden>
           <DialogTitle>Configuración de Aether</DialogTitle>
+          <DialogDescription>Personaliza tu perfil, apariencia y preferencias de idioma.</DialogDescription>
         </VisuallyHidden>
         <div className="flex h-full">
           {/* Sidebar de navegación */}

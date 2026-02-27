@@ -1128,6 +1128,7 @@ export function ChatInterface({
         <DialogContent className="bg-popover/95 backdrop-blur-xl border-primary-500/20 max-w-md">
           <VisuallyHidden>
             <DialogTitle>Desbloquea Aether Premium</DialogTitle>
+            <DialogDescription>Accede a los modelos más potentes como Claude 3.5 Sonnet y GPT-4o.</DialogDescription>
           </VisuallyHidden>
           <DialogHeader>
             <div className="flex items-center gap-3 mb-2">
@@ -1136,9 +1137,9 @@ export function ChatInterface({
               </div>
               <div>
                 <h2 className="text-xl font-semibold">Desbloquea Aether Premium</h2>
-                <DialogDescription className="text-sm text-muted-foreground mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   Accede a los modelos más potentes
-                </DialogDescription>
+                </p>
               </div>
             </div>
           </DialogHeader>

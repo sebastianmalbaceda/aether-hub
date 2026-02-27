@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import {
   Bell,
   Zap,
@@ -14,6 +15,7 @@ import {
 } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import { useUserStore } from '@/stores/user-store'
+import { PricingModal } from '@/components/pricing/pricing-modal'
 
 interface HeaderProps {
   onMenuClick?: () => void
@@ -22,6 +24,9 @@ interface HeaderProps {
 export function Header({ onMenuClick }: HeaderProps) {
   // User store
   const pointsBalance = useUserStore((state) => state.pointsBalance)
+  
+  // Pricing modal state
+  const [showPricing, setShowPricing] = useState(false)
   
   // Format points with K suffix - null-safe
   const formatPoints = (points: number | null | undefined) => {
@@ -61,7 +66,10 @@ export function Header({ onMenuClick }: HeaderProps) {
           CENTRO: Plan Gratuito · Actualizar
       ═══════════════════════════════════════════════════════════════ */}
       <div className="absolute left-1/2 -translate-x-1/2 hidden sm:flex">
-        <button className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-primary-500/10 to-primary-600/10 border border-primary-500/20 text-sm font-medium text-primary-300 hover:from-primary-500/20 hover:to-primary-600/20 hover:border-primary-500/40 transition-all duration-200">
+        <button
+          onClick={() => setShowPricing(true)}
+          className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-primary-500/10 to-primary-600/10 border border-primary-500/20 text-sm font-medium text-primary-300 hover:from-primary-500/20 hover:to-primary-600/20 hover:border-primary-500/40 transition-all duration-200"
+        >
           <Sparkles className="h-4 w-4" />
           <span>Plan Gratuito</span>
           <span className="text-primary-400">·</span>
@@ -108,6 +116,9 @@ export function Header({ onMenuClick }: HeaderProps) {
           </PopoverContent>
         </Popover>
       </div>
+
+      {/* Pricing Modal */}
+      <PricingModal open={showPricing} onOpenChange={setShowPricing} />
     </header>
   )
 }

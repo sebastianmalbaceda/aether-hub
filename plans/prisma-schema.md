@@ -1,32 +1,143 @@
-# Prisma Schema - Aether Hub
+# Prisma Schema y Estado - Aether Hub
 
-## Schema Completo
+## 📋 Resumen Ejecutivo
+
+Este documento define la especificación oficial del esquema de base de datos y la gestión de estado del frontend de Aether Hub, sirviendo como **Fuente de Verdad** para la persistencia de datos y el estado de la aplicación.
+
+**Última actualización:** Febrero 2026  
+**Estado:** En producción
+
+---
+
+## 🗄️ Esquema Prisma
+
+### Ubicación
+
+[`prisma/schema.prisma`](../prisma/schema.prisma)
+
+### Diagrama Entidad-Relación
+
+```mermaid
+erDiagram
+    User ||--o{ Subscription : has
+    User ||--o{ Transaction : creates
+    User ||--o{ ChatSession : owns
+    User ||--o{ UserSettings : has
+    User ||--o{ PointPurchase : makes
+    ChatSession ||--o{ Message : contains
+    Subscription }o--|| Plan : references
+    PointPurchase }o--o| PointPackage : references
+    
+    User {
+        string id PK
+        string email UK
+        string passwordHash
+        string fullName
+        string avatarUrl
+        string role
+        int pointsBalance
+        boolean isActive
+        string stripeCustomerId UK
+        datetime createdAt
+        datetime updatedAt
+    }
+    
+    Plan {
+        string id PK
+        string name
+        string slug UK
+        string type
+        float priceMonthly
+        float priceYearly
+        int pointsIncluded
+        json features
+        json arenaModules
+        boolean isActive
+        boolean isPopular
+        int sortOrder
+    }
+    
+    Subscription {
+        string id PK
+        string userId FK
+        string planId FK
+        string stripeSubscriptionId UK
+        string stripeCustomerId
+        string status
+        datetime currentPeriodStart
+        datetime currentPeriodEnd
+        boolean cancelAtPeriodEnd
+    }
+    
+    Transaction {
+        string id PK
+        string userId FK
+        string type
+        int pointsAmount
+        float moneyAmount
+        string description
+        string stripePaymentId
+        json metadata
+        datetime createdAt
+    }
+    
+    ChatSession {
+        string id PK
+        string userId FK
+        string arenaType
+        string title
+        string modelUsed
+        string skillMode
+        string systemPrompt
+        int totalTokensUsed
+        int totalPointsSpent
+        json contextData
+        boolean isActive
+        datetime createdAt
+        datetime updatedAt
+    }
+    
+    Message {
+        string id PK
+        string sessionId FK
+        string role
+        string content
+        int tokensUsed
+        int pointsCost
+        string modelUsed
+        json metadata
+        datetime createdAt
+    }
+    
+    UserSettings {
+        string id PK
+        string userId FK UK
+        int dailyPointsLimit
+        int sessionTokensLimit
+        string preferredModel
+        string theme
+        string language
+        datetime updatedAt
+    }
+```
+
+---
+
+## 📊 Modelos Principales
+
+### User
 
 ```prisma
-// prisma/schema.prisma
-
-generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-// ============================================
-// USUARIOS Y AUTENTICACIÓN
-// ============================================
-
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
-  passwordHash  String?   // Nullable si usa OAuth
+  passwordHash  String?
   fullName      String?
   avatarUrl     String?
   role          UserRole  @default(USER)
-  pointsBalance Int       @default(0)
+  pointsBalance Int       @default(10000)
   isActive      Boolean   @default(true)
+  stripeCustomerId String? @unique
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -38,6 +149,7 @@ model User {
   pointPurchases PointPurchase[]
 
   @@index([email])
+  @@index([stripeCustomerId])
   @@map("users")
 }
 
@@ -46,74 +158,16 @@ enum UserRole {
   ADMIN
   MODERATOR
 }
+```
 
-// ============================================
-// SUSCRIPCIONES Y PLANES
-// ============================================
+**Notas importantes:**
+- `pointsBalance` tiene valor por defecto de **10,000 puntos**
+- `passwordHash` es nullable (usuarios OAuth no tienen contraseña)
+- `stripeCustomerId` permite vincular cliente de Stripe
 
-model Plan {
-  id              String      @id @default(cuid())
-  name            String
-  slug            String      @unique
-  type            PlanType
-  priceMonthly    Float
-  priceYearly     Float?
-  pointsIncluded  Int
-  features        Json        // Array de características
-  arenaModules    Json?       // Módulos de arena incluidos
-  isActive        Boolean     @default(true)
-  isPopular       Boolean     @default(false)
-  sortOrder       Int         @default(0)
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+### Transaction
 
-  // Relaciones
-  subscriptions Subscription[]
-
-  @@index([slug])
-  @@map("plans")
-}
-
-enum PlanType {
-  FIXED           // Plan fijo con puntos definidos
-  CUSTOM          // Plan personalizado (arma tu pack)
-  PAY_AS_YOU_GO   // Solo recargas
-}
-
-model Subscription {
-  id                   String             @id @default(cuid())
-  userId               String             @unique
-  planId               String
-  stripeSubscriptionId String?            @unique
-  stripeCustomerId     String?
-  status               SubscriptionStatus @default(ACTIVE)
-  currentPeriodStart   DateTime?
-  currentPeriodEnd     DateTime?
-  cancelAtPeriodEnd    Boolean            @default(false)
-  createdAt            DateTime           @default(now())
-  updatedAt            DateTime           @updatedAt
-
-  // Relaciones
-  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plan Plan  @relation(fields: [planId], references: [id])
-
-  @@index([userId])
-  @@index([stripeSubscriptionId])
-  @@map("subscriptions")
-}
-
-enum SubscriptionStatus {
-  ACTIVE
-  PAST_DUE
-  CANCELLED
-  INCOMPLETE
-  TRIALING
-}
-
-// ============================================
-// TRANSACCIONES Y PUNTOS
-// ============================================
-
+```prisma
 model Transaction {
   id              String          @id @default(cuid())
   userId          String
@@ -122,7 +176,7 @@ model Transaction {
   moneyAmount     Float?
   description     String
   stripePaymentId String?
-  metadata        Json?           // Datos adicionales
+  metadata        Json?
   createdAt       DateTime        @default(now())
 
   // Relaciones
@@ -142,44 +196,15 @@ enum TransactionType {
   BONUS                // Puntos de bonificación
   EXPIRATION           // Expiración de puntos
 }
+```
 
-model PointPackage {
-  id          String   @id @default(cuid())
-  name        String
-  points      Int
-  price       Float
-  bonusPoints Int      @default(0)
-  isPopular   Boolean  @default(false)
-  isActive    Boolean  @default(true)
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+**Notas importantes:**
+- `pointsAmount` puede ser **negativo** (deducciones) o **positivo** (créditos)
+- `metadata` almacena información adicional como `modelId`, `tokens`, etc.
 
-  @@map("point_packages")
-}
+### ChatSession
 
-model PointPurchase {
-  id              String   @id @default(cuid())
-  userId          String
-  packageId       String?
-  pointsPurchased Int
-  amountPaid      Float
-  stripePaymentId String?
-  status          String   @default("completed")
-  createdAt       DateTime @default(now())
-
-  // Relaciones
-  user     User          @relation(fields: [userId], references: [id])
-  package  PointPackage? @relation(fields: [packageId], references: [id])
-
-  @@index([userId])
-  @@map("point_purchases")
-}
-
-// ============================================
-// SESIONES DE CHAT Y MENSAJES
-// ============================================
-
+```prisma
 model ChatSession {
   id               String      @id @default(cuid())
   userId           String
@@ -187,10 +212,10 @@ model ChatSession {
   title            String?
   modelUsed        String
   skillMode        String?
-  systemPrompt     String?
+  systemPrompt     String?     @db.Text
   totalTokensUsed  Int         @default(0)
   totalPointsSpent Int         @default(0)
-  contextData      Json?       // Datos de contexto serializados
+  contextData      Json?
   isActive         Boolean     @default(true)
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
@@ -212,7 +237,11 @@ enum ArenaType {
   VIDEO
   AUDIO
 }
+```
 
+### Message
+
+```prisma
 model Message {
   id           String      @id @default(cuid())
   sessionId    String
@@ -221,7 +250,7 @@ model Message {
   tokensUsed   Int         @default(0)
   pointsCost   Int         @default(0)
   modelUsed    String?
-  metadata     Json?       // Datos adicionales (ej. imagen generada)
+  metadata     Json?
   createdAt    DateTime    @default(now())
 
   // Relaciones
@@ -237,11 +266,11 @@ enum MessageRole {
   ASSISTANT
   SYSTEM
 }
+```
 
-// ============================================
-// CONFIGURACIÓN DE USUARIO
-// ============================================
+### UserSettings
 
+```prisma
 model UserSettings {
   id                 String   @id @default(cuid())
   userId             String   @unique
@@ -251,7 +280,7 @@ model UserSettings {
   preferredArena     String?
   notificationsEmail Boolean  @default(true)
   notificationsPush  Boolean  @default(false)
-  arenaPreferences   Json?    // Preferencias por arena
+  arenaPreferences   Json?
   theme              String   @default("dark")
   language           String   @default("es")
   updatedAt          DateTime @updatedAt
@@ -261,720 +290,347 @@ model UserSettings {
 
   @@map("user_settings")
 }
+```
 
-// ============================================
-// MODELOS DE IA Y PRECIOS
-// ============================================
+---
 
-model AIModel {
-  id              String      @id @default(cuid())
-  name            String
-  slug            String      @unique
-  provider        AIProvider
-  contextWindow   Int
-  inputPrice1K    Float       // Precio por 1K tokens input
-  outputPrice1K   Float       // Precio por 1K tokens output
-  inputPoints1K   Int         // Puntos por 1K tokens input
-  outputPoints1K  Int         // Puntos por 1K tokens output
-  capabilities    Json?       // Capacidades del modelo
-  isActive        Boolean     @default(true)
-  isAvailable     Boolean     @default(true)
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+## 🎁 Lógica de Bienvenida (Fallback 200)
 
-  @@index([provider])
-  @@index([slug])
-  @@map("ai_models")
+### El Problema
+
+Cuando un usuario se autentica por primera vez con Supabase Auth, **existe en Supabase pero NO en Prisma**. Esto causaba errores 404 que rompían la experiencia de onboarding.
+
+### La Solución: Upsert Transparente
+
+**REGLA DE ORO:** El endpoint `/api/user/me` **NUNCA debe devolver 404** para un usuario autenticado.
+
+```typescript
+// src/app/api/user/me/route.ts
+
+export async function GET() {
+  // Verificar autenticación con Supabase
+  const authUser = await getAuthUser()
+  
+  if (!authUser) {
+    return NextResponse.json(
+      { error: 'Unauthorized', code: 'AUTH_REQUIRED' },
+      { status: 401 }
+    )
+  }
+
+  // Buscar usuario en Prisma
+  let user = await prisma.user.findUnique({
+    where: { id: authUser.id },
+    // ... select fields
+  })
+
+  // ═══════════════════════════════════════════════════════════════
+  // FALLBACK 200: Si no existe, CREARLO con puntos de bienvenida
+  // ═══════════════════════════════════════════════════════════════
+  if (!user) {
+    console.log(`[API /user/me] Usuario ${authUser.id} no encontrado, creando...`)
+    
+    user = await prisma.user.create({
+      data: {
+        id: authUser.id,
+        email: authUser.email || `user_${authUser.id}@aether.local`,
+        fullName: authUser.user_metadata?.full_name || 
+                  authUser.user_metadata?.name || null,
+        avatarUrl: authUser.user_metadata?.avatar_url || 
+                   authUser.user_metadata?.picture || null,
+        pointsBalance: WELCOME_BONUS_POINTS,  // 10,000 puntos
+        role: 'USER',
+        isActive: true,
+        settings: {
+          create: {
+            dailyPointsLimit: 10000,
+            sessionTokensLimit: 100000,
+            preferredModel: 'llama-3.1-8b-instant',
+            theme: 'dark',
+            language: 'es',
+          }
+        }
+      },
+      // ... select fields
+    })
+
+    // Crear transacción de bono de bienvenida
+    await prisma.transaction.create({
+      data: {
+        userId: user.id,
+        type: 'BONUS',
+        pointsAmount: WELCOME_BONUS_POINTS,
+        description: 'Bono de bienvenida - 10,000 puntos gratis',
+        metadata: { type: 'welcome_bonus' }
+      }
+    })
+  }
+
+  // SIEMPRE devolver 200 con datos válidos
+  return NextResponse.json(response)
 }
+```
 
-enum AIProvider {
-  OPENAI
-  ANTHROPIC
-  GOOGLE
-  META
-  MISTRAL
-  COHERE
-  CUSTOM
+### Constantes de Bienvenida
+
+```typescript
+// Puntos de bienvenida para nuevos usuarios
+const WELCOME_BONUS_POINTS = 10000
+
+// Límite diario por defecto
+const DEFAULT_DAILY_LIMIT = 10000
+
+// Modelo preferido por defecto
+const DEFAULT_MODEL = 'llama-3.1-8b-instant'
+```
+
+---
+
+## 🔄 Gestión de Estado (Zustand)
+
+### Stores Principales
+
+| Store | Ubicación | Propósito |
+|-------|-----------|-----------|
+| `useUserStore` | [`src/stores/user-store.ts`](../src/stores/user-store.ts) | Usuario, puntos, autenticación |
+| `useChatStore` | [`src/stores/chat-store.ts`](../src/stores/chat-store.ts) | Chat, modelo, telemetría |
+| `useAuthStore` | [`src/stores/auth-store.ts`](../src/stores/auth-store.ts) | Estado de autenticación |
+
+### User Store
+
+```typescript
+// src/stores/user-store.ts
+
+interface UserState {
+  // User data
+  user: User | null
+  subscription: Subscription | null
+  settings: UserSettings | null
+  
+  // Points & Usage
+  pointsBalance: number
+  dailyUsage: number
+  dailyLimit: number
+  remainingToday: number
+  
+  // UI State
+  isAuthenticated: boolean
+  isLoading: boolean
+  error: string | null
+  
+  // Actions
+  setUser: (user: User | null) => void
+  setPointsBalance: (balance: number) => void
+  deductPoints: (amount: number) => boolean
+  login: (user: User, subscription?, settings?) => void
+  logout: () => void
 }
+```
 
-// ============================================
-// SKILLS Y MODOS
-// ============================================
+### Chat Store
 
-model Skill {
-  id           String    @id @default(cuid())
-  name         String
-  slug         String    @unique
-  arenaType    ArenaType
-  description  String?
-  systemPrompt String    @db.Text
-  icon         String?
-  isActive     Boolean   @default(true)
-  sortOrder    Int       @default(0)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+```typescript
+// src/stores/chat-store.ts
 
-  @@index([arenaType])
-  @@index([slug])
-  @@map("skills")
-}
-
-// ============================================
-// AUDIT LOG
-// ============================================
-
-model AuditLog {
-  id        String   @id @default(cuid())
-  userId    String?
-  action    String
-  entity    String
-  entityId  String?
-  metadata  Json?
-  ip        String?
-  userAgent String?
-  createdAt DateTime @default(now())
-
-  @@index([userId])
-  @@index([action])
-  @@index([createdAt])
-  @@map("audit_logs")
+interface ChatState {
+  // Current session
+  currentSessionId: string | null
+  messages: Message[]
+  
+  // Selected options
+  selectedModelId: string
+  selectedSkillId: string
+  
+  // Telemetry
+  telemetry: SessionTelemetry
+  
+  // UI State
+  isStreaming: boolean
+  isSending: boolean
+  error: string | null
+  
+  // Actions
+  setSelectedModelId: (modelId: string) => void
+  addMessage: (message: Message) => void
+  updateLastMessage: (content: string) => void
+  clearSession: () => void
 }
 ```
 
 ---
 
-## Tipos TypeScript
+## 🛡️ Null-Checks Obligatorios
+
+### REGLA DE ORO
+
+**TODO acceso a datos del usuario debe ser null-safe.** Los crashes por `null` o `undefined` son inaceptables.
+
+### Patrones Correctos
 
 ```typescript
-// types/index.ts
+// ═══════════════════════════════════════════════════════════════
+// ACCESO A PROPIEDADES DE USUARIO
+// ═══════════════════════════════════════════════════════════════
 
-// ============================================
+// ❌ INCORRECTO - Puede causar crash
+<span>{user.fullName}</span>
+
+// ✅ CORRECTO - Null-safe con optional chaining
+<span>{user?.fullName ?? 'Usuario'}</span>
+
+
+// ═══════════════════════════════════════════════════════════════
+// PUNTOS Y BALANCE
+// ═══════════════════════════════════════════════════════════════
+
+// ❌ INCORRECTO - Puede mostrar "null" o "undefined"
+<span>{pointsBalance} pts</span>
+
+// ✅ CORRECTO - Función formatPoints con null-safety
+const formatPoints = (points: number | null | undefined) => {
+  if (points === null || points === undefined || isNaN(points)) return '0'
+  if (points >= 1000) return `${(points / 1000).toFixed(1).replace(/\.0$/, '')}K`
+  return points.toString()
+}
+
+<span>{formatPoints(pointsBalance)} pts</span>
+
+
+// ═══════════════════════════════════════════════════════════════
+// CÁLCULOS CON PUNTOS
+// ═══════════════════════════════════════════════════════════════
+
+// ❌ INCORRECTO - Puede resultar en NaN
+const remaining = dailyLimit - dailyUsage
+
+// ✅ CORRECTO - Con valores por defecto
+const remaining = Math.max(0, (dailyLimit || 10000) - (dailyUsage || 0))
+
+
+// ═══════════════════════════════════════════════════════════════
+// AVATAR Y METADATOS
+// ═══════════════════════════════════════════════════════════════
+
+// ✅ CORRECTO - Con fallback
+<Avatar>
+  <AvatarImage src={user?.avatarUrl || undefined} />
+  <AvatarFallback>{getUserInitials()}</AvatarFallback>
+</Avatar>
+
+// Función helper para iniciales
+const getUserInitials = () => {
+  if (user?.fullName) {
+    return user.fullName
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
+  }
+  return 'AU'  // Fallback genérico
+}
+```
+
+---
+
+## 📊 Tipos TypeScript
+
+### Tipos Principales
+
+```typescript
+// src/types/index.ts
+
 // User Types
-// ============================================
-
-export type UserRole = 'USER' | 'ADMIN' | 'MODERATOR';
+export type UserRole = 'USER' | 'ADMIN' | 'MODERATOR'
 
 export interface User {
-  id: string;
-  email: string;
-  fullName: string | null;
-  avatarUrl: string | null;
-  role: UserRole;
-  pointsBalance: number;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  subscription?: Subscription;
-  settings?: UserSettings;
+  id: string
+  email: string
+  fullName: string | null
+  avatarUrl: string | null
+  role: UserRole
+  pointsBalance: number
+  isActive: boolean
+  createdAt: Date
 }
 
-// ============================================
-// Subscription & Plans
-// ============================================
-
-export type PlanType = 'FIXED' | 'CUSTOM' | 'PAY_AS_YOU_GO';
-export type SubscriptionStatus = 'ACTIVE' | 'PAST_DUE' | 'CANCELLED' | 'INCOMPLETE' | 'TRIALING';
-
-export interface Plan {
-  id: string;
-  name: string;
-  slug: string;
-  type: PlanType;
-  priceMonthly: number;
-  priceYearly: number | null;
-  pointsIncluded: number;
-  features: string[];
-  arenaModules?: ArenaModule[];
-  isActive: boolean;
-  isPopular: boolean;
-  sortOrder: number;
-}
+// Subscription Types
+export type SubscriptionStatus = 'ACTIVE' | 'PAST_DUE' | 'CANCELLED' | 'INCOMPLETE' | 'TRIALING'
 
 export interface Subscription {
-  id: string;
-  userId: string;
-  planId: string;
-  stripeSubscriptionId: string | null;
-  stripeCustomerId: string | null;
-  status: SubscriptionStatus;
-  currentPeriodStart: Date | null;
-  currentPeriodEnd: Date | null;
-  cancelAtPeriodEnd: boolean;
-  plan?: Plan;
+  id: string
+  userId: string
+  planId: string
+  stripeSubscriptionId: string | null
+  status: SubscriptionStatus
+  currentPeriodEnd: Date | null
+  plan?: Plan
 }
 
-// ============================================
-// Points & Transactions
-// ============================================
-
-export type TransactionType = 
-  | 'SUBSCRIPTION_CREDIT'
-  | 'PURCHASE_POINTS'
-  | 'USAGE_DEDUCTION'
-  | 'REFUND'
-  | 'BONUS'
-  | 'EXPIRATION';
-
-export interface Transaction {
-  id: string;
-  userId: string;
-  type: TransactionType;
-  pointsAmount: number;
-  moneyAmount: number | null;
-  description: string;
-  stripePaymentId: string | null;
-  metadata: Record<string, unknown> | null;
-  createdAt: Date;
-}
-
-export interface PointPackage {
-  id: string;
-  name: string;
-  points: number;
-  price: number;
-  bonusPoints: number;
-  isPopular: boolean;
-}
-
-// ============================================
-// Chat & Messages
-// ============================================
-
-export type ArenaType = 'TEXT' | 'CODE' | 'IMAGE' | 'VIDEO' | 'AUDIO';
-export type MessageRole = 'USER' | 'ASSISTANT' | 'SYSTEM';
-
-export interface ChatSession {
-  id: string;
-  userId: string;
-  arenaType: ArenaType;
-  title: string | null;
-  modelUsed: string;
-  skillMode: string | null;
-  systemPrompt: string | null;
-  totalTokensUsed: number;
-  totalPointsSpent: number;
-  contextData: ContextData | null;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  messages?: Message[];
-}
+// Chat Types
+export type ArenaType = 'TEXT' | 'CODE' | 'IMAGE' | 'VIDEO' | 'AUDIO'
+export type MessageRole = 'USER' | 'ASSISTANT' | 'SYSTEM'
 
 export interface Message {
-  id: string;
-  sessionId: string;
-  role: MessageRole;
-  content: string;
-  tokensUsed: number;
-  pointsCost: number;
-  modelUsed: string | null;
-  metadata: MessageMetadata | null;
-  createdAt: Date;
+  id: string
+  sessionId: string
+  role: MessageRole
+  content: string
+  tokensUsed: number
+  pointsCost: number
+  modelUsed: string | null
+  createdAt: Date
 }
 
-export interface ContextData {
-  messages: Array<{ role: string; content: string }>;
-  totalTokens: number;
-  lastUpdated: Date;
-}
-
-export interface MessageMetadata {
-  imageUrls?: string[];
-  codeBlocks?: Array<{ language: string; code: string }>;
-  finishReason?: string;
-  modelVersion?: string;
-}
-
-// ============================================
-// AI Models
-// ============================================
-
-export type AIProvider = 
-  | 'OPENAI'
-  | 'ANTHROPIC'
-  | 'GOOGLE'
-  | 'META'
-  | 'MISTRAL'
-  | 'COHERE'
-  | 'CUSTOM';
-
-export interface AIModel {
-  id: string;
-  name: string;
-  slug: string;
-  provider: AIProvider;
-  contextWindow: number;
-  inputPrice1K: number;
-  outputPrice1K: number;
-  inputPoints1K: number;
-  outputPoints1K: number;
-  capabilities: ModelCapabilities | null;
-  isActive: boolean;
-  isAvailable: boolean;
-}
-
-export interface ModelCapabilities {
-  chat: boolean;
-  code: boolean;
-  image: boolean;
-  video: boolean;
-  audio: boolean;
-  functionCalling: boolean;
-  streaming: boolean;
-}
-
-// ============================================
-// Skills
-// ============================================
-
-export interface Skill {
-  id: string;
-  name: string;
-  slug: string;
-  arenaType: ArenaType;
-  description: string | null;
-  systemPrompt: string;
-  icon: string | null;
-  isActive: boolean;
-  sortOrder: number;
-}
-
-// ============================================
-// User Settings
-// ============================================
-
-export interface UserSettings {
-  id: string;
-  userId: string;
-  dailyPointsLimit: number;
-  sessionTokensLimit: number;
-  preferredModel: string | null;
-  preferredArena: string | null;
-  notificationsEmail: boolean;
-  notificationsPush: boolean;
-  arenaPreferences: ArenaPreferences | null;
-  theme: 'dark' | 'light' | 'system';
-  language: string;
-}
-
-export interface ArenaPreferences {
-  text?: {
-    defaultModel?: string;
-    defaultSkill?: string;
-  };
-  code?: {
-    defaultModel?: string;
-    defaultSkill?: string;
-    editorTheme?: string;
-  };
-  image?: {
-    defaultAspectRatio?: string;
-    defaultStyle?: string;
-  };
-}
-
-// ============================================
-// Telemetry
-// ============================================
+// Telemetry Types
+export type ContextStatus = 'normal' | 'warning' | 'critical'
 
 export interface SessionTelemetry {
-  contextUsed: number;
-  contextLimit: number;
-  contextPercentage: number;
-  lastRequestCost: number;
-  lastRequestTokens: number;
-  totalSessionCost: number;
-  totalSessionTokens: number;
-  currentModel: string;
-  currentSkill: string;
-  contextStatus: ContextStatus;
-}
-
-export type ContextStatus = 'normal' | 'warning' | 'critical';
-
-// ============================================
-// API Types
-// ============================================
-
-export interface ChatCompletionRequest {
-  messages: Array<{ role: MessageRole; content: string }>;
-  model: string;
-  skill?: string;
-  stream?: boolean;
-  maxTokens?: number;
-  temperature?: number;
-}
-
-export interface ChatCompletionResponse {
-  id: string;
-  message: Message;
-  usage: {
-    promptTokens: number;
-    completionTokens: number;
-    totalTokens: number;
-  };
-  cost: {
-    points: number;
-    usd: number;
-  };
-  telemetry: SessionTelemetry;
-}
-
-export interface PointsBalanceResponse {
-  balance: number;
-  dailyUsage: number;
-  dailyLimit: number;
-  remainingToday: number;
-}
-
-// ============================================
-// Pricing Calculator
-// ============================================
-
-export interface PricingCalculatorInput {
-  modules: ArenaModule[];
-  estimatedUsage: {
-    text: number;  // mensajes/día
-    code: number;  // mensajes/día
-    image: number; // imágenes/día
-  };
-}
-
-export interface ArenaModule {
-  type: ArenaType;
-  enabled: boolean;
-  models: string[];
-}
-
-export interface PricingCalculatorOutput {
-  monthlyPrice: number;
-  yearlyPrice: number;
-  pointsIncluded: number;
-  breakdown: {
-    module: string;
-    price: number;
-    points: number;
-  }[];
+  contextUsed: number
+  contextLimit: number
+  contextPercentage: number
+  lastRequestCost: number
+  lastRequestTokens: number
+  totalSessionCost: number
+  totalSessionTokens: number
+  currentModel: string
+  currentSkill: string
+  contextStatus: ContextStatus
 }
 ```
 
 ---
 
-## Consultas Frecuentes (Prisma)
+## 🚫 Errores Comunes y Soluciones
 
-```typescript
-// lib/queries/user.ts
+### Error: "Cannot read properties of null"
 
-import { prisma } from '@/lib/prisma';
+**Causa:** Acceso a propiedad de objeto null.
 
-// Obtener usuario con suscripción y configuración
-export async function getUserWithDetails(userId: string) {
-  return prisma.user.findUnique({
-    where: { id: userId },
-    include: {
-      subscription: {
-        include: { plan: true }
-      },
-      settings: true
-    }
-  });
-}
+**Solución:** Usar optional chaining (`?.`) y nullish coalescing (`??`).
 
-// Obtener saldo de puntos y uso diario
-export async function getUserPointsBalance(userId: string) {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { pointsBalance: true, settings: { select: { dailyPointsLimit: true } } }
-  });
+### Error: "User not found" (404)
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+**Causa:** Usuario existe en Supabase Auth pero no en Prisma.
 
-  const dailyUsage = await prisma.transaction.aggregate({
-    where: {
-      userId,
-      type: 'USAGE_DEDUCTION',
-      createdAt: { gte: today }
-    },
-    _sum: { pointsAmount: true }
-  });
+**Solución:** Implementar upsert automático en `/api/user/me`.
 
-  return {
-    balance: user?.pointsBalance ?? 0,
-    dailyUsage: Math.abs(dailyUsage._sum.pointsAmount ?? 0),
-    dailyLimit: user?.settings?.dailyPointsLimit ?? 10000
-  };
-}
+### Error: "Points balance is NaN"
 
-// Crear sesión de chat con mensaje inicial
-export async function createChatSession(data: {
-  userId: string;
-  arenaType: ArenaType;
-  model: string;
-  skill?: string;
-  systemPrompt?: string;
-  initialMessage?: string;
-}) {
-  return prisma.$transaction(async (tx) => {
-    const session = await tx.chatSession.create({
-      data: {
-        userId: data.userId,
-        arenaType: data.arenaType,
-        modelUsed: data.model,
-        skillMode: data.skill,
-        systemPrompt: data.systemPrompt
-      }
-    });
+**Causa:** Operación matemática con valor null/undefined.
 
-    if (data.initialMessage) {
-      await tx.message.create({
-        data: {
-          sessionId: session.id,
-          role: 'USER',
-          content: data.initialMessage
-        }
-      });
-    }
-
-    return session;
-  });
-}
-
-// Registrar uso y descontar puntos
-export async function recordUsage(data: {
-  userId: string;
-  sessionId: string;
-  model: string;
-  promptTokens: number;
-  completionTokens: number;
-  pointsCost: number;
-  userMessage: string;
-  assistantMessage: string;
-}) {
-  return prisma.$transaction(async (tx) => {
-    // Descontar puntos
-    await tx.user.update({
-      where: { id: data.userId },
-      data: { pointsBalance: { decrement: data.pointsCost } }
-    });
-
-    // Registrar transacción
-    await tx.transaction.create({
-      data: {
-        userId: data.userId,
-        type: 'USAGE_DEDUCTION',
-        pointsAmount: -data.pointsCost,
-        description: `Uso de ${data.model}`,
-        metadata: {
-          sessionId: data.sessionId,
-          promptTokens: data.promptTokens,
-          completionTokens: data.completionTokens
-        }
-      }
-    });
-
-    // Crear mensajes
-    await tx.message.createMany({
-      data: [
-        {
-          sessionId: data.sessionId,
-          role: 'USER',
-          content: data.userMessage,
-          tokensUsed: data.promptTokens
-        },
-        {
-          sessionId: data.sessionId,
-          role: 'ASSISTANT',
-          content: data.assistantMessage,
-          tokensUsed: data.completionTokens,
-          pointsCost: data.pointsCost,
-          modelUsed: data.model
-        }
-      ]
-    });
-
-    // Actualizar sesión
-    await tx.chatSession.update({
-      where: { id: data.sessionId },
-      data: {
-        totalTokensUsed: { increment: data.promptTokens + data.completionTokens },
-        totalPointsSpent: { increment: data.pointsCost }
-      }
-    });
-  });
-}
-```
+**Solución:** Usar valores por defecto: `(pointsBalance || 0)`.
 
 ---
 
-## Seed Data
+## 📝 Checklist de Implementación
 
-```typescript
-// prisma/seed.ts
-
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
-async function main() {
-  // Crear planes
-  await prisma.plan.createMany({
-    data: [
-      {
-        name: 'Explorer',
-        slug: 'explorer',
-        type: 'FIXED',
-        priceMonthly: 9.99,
-        priceYearly: 99.99,
-        pointsIncluded: 5000,
-        features: ['Acceso a modelos básicos', 'Arena de Texto', 'Soporte por email'],
-        isPopular: false,
-        sortOrder: 1
-      },
-      {
-        name: 'Creator',
-        slug: 'creator',
-        type: 'FIXED',
-        priceMonthly: 19.99,
-        priceYearly: 199.99,
-        pointsIncluded: 12000,
-        features: ['Todos los modelos', 'Todas las Arenas', 'Prioridad en cola', 'Soporte prioritario'],
-        isPopular: true,
-        sortOrder: 2
-      },
-      {
-        name: 'Enterprise',
-        slug: 'enterprise',
-        type: 'FIXED',
-        priceMonthly: 49.99,
-        priceYearly: 499.99,
-        pointsIncluded: 35000,
-        features: ['Todo incluido', 'API Access', 'Dedicado', 'SLA garantizado'],
-        isPopular: false,
-        sortOrder: 3
-      }
-    ]
-  });
-
-  // Crear paquetes de puntos
-  await prisma.pointPackage.createMany({
-    data: [
-      { name: 'Starter', points: 1000, price: 2.99, bonusPoints: 0, sortOrder: 1 },
-      { name: 'Basic', points: 5000, price: 9.99, bonusPoints: 500, isPopular: true, sortOrder: 2 },
-      { name: 'Pro', points: 15000, price: 24.99, bonusPoints: 3000, sortOrder: 3 },
-      { name: 'Ultimate', points: 50000, price: 69.99, bonusPoints: 15000, sortOrder: 4 }
-    ]
-  });
-
-  // Crear modelos de IA
-  await prisma.aIModel.createMany({
-    data: [
-      {
-        name: 'GPT-4o',
-        slug: 'gpt-4o',
-        provider: 'OPENAI',
-        contextWindow: 128000,
-        inputPrice1K: 0.0025,
-        outputPrice1K: 0.01,
-        inputPoints1K: 3,
-        outputPoints1K: 10,
-        capabilities: { chat: true, code: true, image: true, functionCalling: true, streaming: true }
-      },
-      {
-        name: 'GPT-4o-mini',
-        slug: 'gpt-4o-mini',
-        provider: 'OPENAI',
-        contextWindow: 128000,
-        inputPrice1K: 0.00015,
-        outputPrice1K: 0.0006,
-        inputPoints1K: 0.15,
-        outputPoints1K: 0.6,
-        capabilities: { chat: true, code: true, functionCalling: true, streaming: true }
-      },
-      {
-        name: 'Claude 3.5 Sonnet',
-        slug: 'claude-3-5-sonnet',
-        provider: 'ANTHROPIC',
-        contextWindow: 200000,
-        inputPrice1K: 0.003,
-        outputPrice1K: 0.015,
-        inputPoints1K: 3,
-        outputPoints1K: 15,
-        capabilities: { chat: true, code: true, functionCalling: true, streaming: true }
-      },
-      {
-        name: 'Claude 3 Haiku',
-        slug: 'claude-3-haiku',
-        provider: 'ANTHROPIC',
-        contextWindow: 200000,
-        inputPrice1K: 0.00025,
-        outputPrice1K: 0.00125,
-        inputPoints1K: 0.25,
-        outputPoints1K: 1.25,
-        capabilities: { chat: true, code: true, streaming: true }
-      },
-      {
-        name: 'Gemini 1.5 Pro',
-        slug: 'gemini-1-5-pro',
-        provider: 'GOOGLE',
-        contextWindow: 1000000,
-        inputPrice1K: 0.00125,
-        outputPrice1K: 0.005,
-        inputPoints1K: 1.25,
-        outputPoints1K: 5,
-        capabilities: { chat: true, code: true, image: true, video: true, audio: true, streaming: true }
-      }
-    ]
-  });
-
-  // Crear skills
-  await prisma.skill.createMany({
-    data: [
-      {
-        name: 'Asistente Estándar',
-        slug: 'assistant',
-        arenaType: 'TEXT',
-        description: 'Un asistente útil y equilibrado para tareas generales',
-        systemPrompt: 'Eres un asistente útil, amable y conocedor. Proporciona respuestas claras y precisas.',
-        sortOrder: 1
-      },
-      {
-        name: 'Poeta/Creativo',
-        slug: 'creative',
-        arenaType: 'TEXT',
-        description: 'Especializado en escritura creativa y poesía',
-        systemPrompt: 'Eres un escritor creativo con talento para la poesía y la narrativa. Deja fluir tu imaginación.',
-        sortOrder: 2
-      },
-      {
-        name: 'Redactor Académico',
-        slug: 'academic',
-        arenaType: 'TEXT',
-        description: 'Escritura formal y académica',
-        systemPrompt: 'Eres un académico experto. Escribe de forma formal, precisa y bien estructurada. Usa referencias cuando sea apropiado.',
-        sortOrder: 3
-      },
-      {
-        name: 'Arquitecto de Software',
-        slug: 'architect',
-        arenaType: 'CODE',
-        description: 'Diseño de arquitecturas y sistemas',
-        systemPrompt: 'Eres un arquitecto de software senior. Ayuda a diseñar sistemas escalables, limpios y mantenibles.',
-        sortOrder: 1
-      },
-      {
-        name: 'Depurador',
-        slug: 'debugger',
-        arenaType: 'CODE',
-        description: 'Análisis y corrección de errores',
-        systemPrompt: 'Eres un experto en debugging. Analiza el código, identifica errores y propone soluciones claras.',
-        sortOrder: 2
-      }
-    ]
-  });
-}
-
-main()
-  .catch(console.error)
-  .finally(() => prisma.$disconnect());
-```
+- [x] Esquema Prisma completo y migrado
+- [x] Relaciones entre tablas configuradas
+- [x] Índices para queries frecuentes
+- [x] Fallback 200 en /api/user/me
+- [x] Fallback 200 en /api/chat
+- [x] Stores de Zustand configurados
+- [x] Null-checks en todos los componentes
+- [x] Funciones de formateo null-safe
+- [x] Tipos TypeScript actualizados

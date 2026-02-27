@@ -1,449 +1,336 @@
 # Sistema de Diseño UI - Aether Hub
 
-## 🎨 Filosofía de Diseño: "Arcano-Tecnológico"
+## 📋 Resumen Ejecutivo
 
-El diseño combina elementos místicos/arcánicos con una estética tecnológica moderna, creando una experiencia visual única que evoca poder, misterio y sofisticación.
+Este documento define la especificación oficial del diseño de interfaz de Aether Hub, sirviendo como **Fuente de Verdad** para el estilo visual, componentes y comportamiento de la UI.
 
-### Principios Clave
+**Última actualización:** Febrero 2026  
+**Estado:** En producción
+
+---
+
+## 🎨 Estilo Visual: Material Neon Minimalista
+
+### Filosofía de Diseño
+
+El diseño de Aether Hub sigue el estilo **"Material Neon Minimalista"**, una evolución del "Arcano-Tecnológico" original que prioriza:
 
 1. **Oscuridad Elegante**: Fondos profundos que reducen la fatiga visual
-2. **Acentos Violeta**: El color primario transmite creatividad y exclusividad
-3. **Transparencia y Profundidad**: Efectos de glassmorphism y capas
-4. **Animaciones Sutiles**: Micro-interacciones que dan vida a la interfaz
-5. **Tipografía Nítida**: Contraste claro para máxima legibilidad
+2. **Minimalismo Radical**: Eliminación de bordes y elementos redundantes
+3. **Translucidez Estratégica**: Uso de fondos translúcidos para jerarquía visual
+4. **Acentos Tenues**: Violeta/eléctrico como color primario, aplicado con moderación
+5. **Espaciado Generoso**: Respiración visual entre elementos
+
+### Paleta de Colores
+
+#### Fondos - Jerarquía de elevación
+
+```css
+--background: #0a0a0f;              /* Fondo base - el más oscuro */
+--background-secondary: #0f0f1a;    /* Cards, sidebar */
+--background-tertiary: #1a1a2e;     /* Elevación, hover states */
+--background-elevated: #252542;     /* Modales, popovers */
+```
+
+#### Primario - Violeta eléctrico
+
+```css
+--primary-500: #a855f7;
+--primary-600: #9333ea;
+--primary-700: #7c3aed;             /* Principal para acentos */
+```
+
+#### Bordes sutiles
+
+```css
+--border-subtle: rgba(157, 78, 221, 0.1);      /* border-primary-500/10 */
+--border-structural: rgba(255, 255, 255, 0.05); /* border-border/50 */
+```
+
+#### Texto
+
+```css
+--foreground: #ffffff;
+--foreground-secondary: #a1a1aa;    /* muted-foreground */
+--foreground-muted: #71717a;
+```
+
+### Principios de Aplicación
+
+| Elemento | Estilo Correcto | Estilo Incorrecto |
+|----------|-----------------|-------------------|
+| Cards | `bg-background-secondary/50` sin borde | `bg-background-secondary border border-white/20` |
+| Sidebar | `bg-background-secondary/50` translúcido | `bg-background-secondary` sólido |
+| Separadores | `border-primary-500/10` tenue | `border-white/20` visible |
+| Hover states | `hover:bg-primary-500/5` sutil | `hover:bg-primary-500/20` intenso |
+| Activos | `bg-primary-500/15 border-l-2 border-primary-500` | `bg-primary-500 text-white` |
 
 ---
 
-## 🎨 Paleta de Colores
+## 🏗️ Layout Estructural: The Holy Grail
 
-### Colores Primarios (Violeta)
+### Arquitectura General
 
-```css
-/* Tailwind config */
-colors: {
-  primary: {
-    50: '#faf5ff',   /* Más claro */
-    100: '#f3e8ff',
-    200: '#e9d5ff',
-    300: '#d8b4fe',
-    400: '#c084fc',
-    500: '#a855f7',
-    600: '#9333ea',
-    700: '#7c3aed',  /* Principal */
-    800: '#6b21a8',
-    900: '#581c87',  /* Más oscuro */
-    950: '#3b0764'
-  }
-}
-```
-
-### Background (Modo Oscuro)
-
-```css
-colors: {
-  background: {
-    DEFAULT: '#0a0a0f',    /* Fondo base */
-    secondary: '#0f0f1a',  /* Cards */
-    tertiary: '#1a1a2e',   /* Elevación */
-    elevated: '#252542',   /* Modales, popovers */
-    muted: '#16213e'       /* Áreas secundarias */
-  }
-}
-```
-
-### Colores Semánticos
-
-```css
-colors: {
-  success: {
-    DEFAULT: '#22c55e',
-    muted: '#16a34a',
-    background: 'rgba(34, 197, 94, 0.1)'
-  },
-  warning: {
-    DEFAULT: '#eab308',
-    muted: '#ca8a04',
-    background: 'rgba(234, 179, 8, 0.1)'
-  },
-  error: {
-    DEFAULT: '#ef4444',
-    muted: '#dc2626',
-    background: 'rgba(239, 68, 68, 0.1)'
-  },
-  info: {
-    DEFAULT: '#3b82f6',
-    muted: '#2563eb',
-    background: 'rgba(59, 130, 246, 0.1)'
-  }
-}
-```
-
-### Texto
-
-```css
-colors: {
-  foreground: {
-    DEFAULT: '#ffffff',
-    secondary: '#a1a1aa',    /* Texto secundario */
-    muted: '#71717a',        /* Texto deshabilitado */
-    subtle: '#52525b'        /* Placeholders */
-  }
-}
-```
-
----
-
-## 📐 Sistema de Espaciado
-
-```css
-/* Tailwind spacing extendido */
-spacing: {
-  '18': '4.5rem',
-  '88': '22rem',
-  '128': '32rem'
-}
-
-/* Padding estándar de componentes */
---padding-card: 1.5rem;      /* p-6 */
---padding-section: 2rem;     /* p-8 */
---padding-modal: 1.5rem;     /* p-6 */
---padding-sidebar: 1rem;     /* p-4 */
-```
-
----
-
-## 🔤 Tipografía
-
-### Fuentes
-
-```css
-/* Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-
-fontFamily: {
-  sans: ['Inter', 'system-ui', 'sans-serif'],
-  mono: ['JetBrains Mono', 'Consolas', 'monospace']
-}
-```
-
-### Escala Tipográfica
-
-| Elemento | Tamaño | Peso | Clase Tailwind |
-|----------|--------|------|----------------|
-| H1 | 2.25rem (36px) | 700 | `text-4xl font-bold` |
-| H2 | 1.875rem (30px) | 600 | `text-3xl font-semibold` |
-| H3 | 1.5rem (24px) | 600 | `text-2xl font-semibold` |
-| H4 | 1.25rem (20px) | 500 | `text-xl font-medium` |
-| Body | 1rem (16px) | 400 | `text-base` |
-| Small | 0.875rem (14px) | 400 | `text-sm` |
-| XSmall | 0.75rem (12px) | 400 | `text-xs` |
-
----
-
-## 🧩 Componentes Core
-
-### 1. Sidebar de Navegación
+El layout implementa un patrón **Holy Grail** moderno usando Flexbox horizontal:
 
 ```
-┌─────────────────────────┐
-│  🌌 AETHER              │
-│                         │
-│  ┌─────────────────────┐│
-│  │ 💬 Arena Texto      ││
-│  └─────────────────────┘│
-│  ┌─────────────────────┐│
-│  │ 💻 Arena Código     ││
-│  └─────────────────────┘│
-│  ┌─────────────────────┐│
-│  │ 🎨 Multimedia       ││
-│  └─────────────────────┘│
-│                         │
-│  ─────────────────────  │
-│                         │
-│  ⚡ 12,450 puntos       │
-│  ━━━━━━━━━━━━━━━━━━━   │
-│  75% usado hoy          │
-│                         │
-│  ┌─────────────────────┐│
-│  │ 👤 Usuario    ▼     ││
-│  └─────────────────────┘│
-└─────────────────────────┘
+┌────────────────────────────────────────────────────────────────────┐
+│                         VIEWPORT (h-screen)                        │
+│  ┌──────────┬─────────────────────────────────┬────────────────┐  │
+│  │          │           HEADER                 │                │  │
+│  │          │  (h-14, shrink-0)                │                │  │
+│  │  SIDEBAR ├─────────────────────────────────┤   TELEMETRÍA   │  │
+│  │  (w-64)  │           MAIN                   │   (opcional)   │  │
+│  │          │  (flex-1, overflow-y-auto)       │                │  │
+│  │          │                                  │                │  │
+│  │          │  ┌────────────────────────────┐  │                │  │
+│  │          │  │   CONTENIDO (max-w-4xl)    │  │                │  │
+│  │          │  │   mx-auto, centrado        │  │                │  │
+│  │          │  └────────────────────────────┘  │                │  │
+│  └──────────┴─────────────────────────────────┴────────────────┘  │
+└────────────────────────────────────────────────────────────────────┘
 ```
 
-**Características:**
-- Ancho fijo: 260px (colapsable a 72px)
-- Fondo: `background-secondary` con blur
-- Items activos con gradiente violeta sutil
-- Indicador de puntos con barra de progreso
-- Avatar con dropdown de usuario
-
-### 2. Header Principal
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│ 🏠 Dashboard  >  Arena Texto                    🔔  ⚙️  🌙     │
-├──────────────────────────────────────────────────────────────────┤
-│ Modelo: [GPT-4o ▼]   Skill: [Asistente ▼]   Nuevo Chat [+]     │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-**Características:**
-- Altura: 64px
-- Breadcrumb de navegación
-- Selectores de modelo y skill
-- Acciones rápidas
-
-### 3. Context Window Bar
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│ Contexto: 45,230 / 128,000 tokens                                │
-│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ │
-│ ████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
-│                                                                  │
-│ ⚠️ 35% restante - Considere limpiar contexto antiguo             │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-**Estados de Color:**
-- 0-75%: Verde (`success`)
-- 75-90%: Amarillo (`warning`)
-- 90-100%: Rojo (`error`)
-
-### 4. Chat Interface
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                                                                  │
-│  ┌────────────────────────────────────────────────────────────┐  │
-│  │ 👤 Tú                                                       │  │
-│  │ Explica la teoría de la relatividad de forma simple        │  │
-│  │                                          15 tokens │ 0.02 pts│  │
-│  └────────────────────────────────────────────────────────────┘  │
-│                                                                  │
-│  ┌────────────────────────────────────────────────────────────┐  │
-│  │ 🤖 Claude 3.5 Sonnet                                       │  │
-│  │                                                             │  │
-│  │ La teoría de la relatividad, propuesta por Einstein...     │  │
-│  │                                                             │  │
-│  │ 📋 Copiar  🔄 Regenerar  ⭐ Guardar                        │  │
-│  │                                          245 tokens │ 3.5 pts│  │
-│  └────────────────────────────────────────────────────────────┘  │
-│                                                                  │
-├──────────────────────────────────────────────────────────────────┤
-│ ┌──────────────────────────────────────────────────────────────┐ │
-│ │ Escribe tu mensaje...                              [📎] [🎤] │ │
-│ │                                                              │ │
-│ │ ────────────────────────────────────────────────────────────│ │
-│ │ Estimado: ~50 tokens │ Costo: ~0.5 pts           [Enviar ➤] │ │
-│ └──────────────────────────────────────────────────────────────┘ │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-### 5. Panel de Telemetría
-
-```
-┌─────────────────────────────────────┐
-│ 📊 Sesión Actual                    │
-├─────────────────────────────────────┤
-│                                     │
-│ Puntos Restantes                    │
-│ ┌─────────────────────────────────┐ │
-│ │     8,750 / 10,000              │ │
-│ │     ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░░  │ │
-│ └─────────────────────────────────┘ │
-│                                     │
-│ Última Petición                     │
-│ ┌─────────────────────────────────┐ │
-│ │ Tokens: 260                     │ │
-│ │ Costo:  3.5 pts ($0.0035)       │ │
-│ │ Modelo: Claude 3.5 Sonnet       │ │
-│ └─────────────────────────────────┘ │
-│                                     │
-│ Total de Sesión                     │
-│ ┌─────────────────────────────────┐ │
-│ │ Mensajes: 12                    │ │
-│ │ Tokens:  3,450                  │ │
-│ │ Gastado: 45 pts                 │ │
-│ └─────────────────────────────────┘ │
-│                                     │
-│ ⚠️ Límite Diario: 7,500 / 10,000   │
-└─────────────────────────────────────┘
-```
-
-### 6. Configurador de Packs
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                  🎯 Arma tu Pack Personalizado                   │
-├──────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  Selecciona los módulos que necesitas:                          │
-│                                                                  │
-│  ┌────────────────────┐  ┌────────────────────┐                 │
-│  │ ☑️ Arena Texto     │  │ ☑️ Arena Código    │                 │
-│  │    $5/mes          │  │    $7/mes          │                 │
-│  │    3,000 pts       │  │    4,000 pts       │                 │
-│  └────────────────────┘  └────────────────────┘                 │
-│                                                                  │
-│  ┌────────────────────┐  ┌────────────────────┐                 │
-│  │ ☐ Imágenes         │  │ ☐ Audio/Video      │                 │
-│  │    $10/mes         │  │    $15/mes         │                 │
-│  │    5,000 pts       │  │    8,000 pts       │                 │
-│  └────────────────────┘  └────────────────────┘                 │
-│                                                                  │
-│  ─────────────────────────────────────────────────────────────  │
-│                                                                  │
-│  Tu Pack:                                         $12/mes       │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│  ✓ Arena Texto + Arena Código                                   │
-│  ✓ 7,000 puntos incluidos                                       │
-│  ✓ Acceso a todos los modelos de texto y código                 │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │              🚀 Suscribirse a este Pack                   │   │
-│  └──────────────────────────────────────────────────────────┘   │
-└──────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 🎭 Componentes Shadcn UI Personalizados
-
-### Button (Botón)
+### Código Estructural Base
 
 ```tsx
-// Variantes personalizadas
-const buttonVariants = cva(
-  "inline-flex items-center justify-center rounded-lg text-sm font-medium transition-all",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary-700 text-white hover:bg-primary-600 shadow-lg shadow-primary-700/25",
-        destructive: "bg-error text-white hover:bg-error-muted",
-        outline: "border border-primary-700 text-primary-400 hover:bg-primary-700/10",
-        secondary: "bg-background-tertiary text-foreground hover:bg-background-elevated",
-        ghost: "text-foreground-secondary hover:bg-background-tertiary hover:text-foreground",
-        link: "text-primary-400 underline-offset-4 hover:underline"
-      },
-      size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 px-3",
-        lg: "h-11 px-8",
-        icon: "h-10 w-10"
-      }
-    }
-  }
-)
-```
+// src/app/(dashboard)/layout.tsx
+<div className="flex h-screen w-full overflow-hidden bg-background">
+  {/* 1. SIDEBAR - Desktop fijo, móvil en Sheet */}
+  <div className={cn(
+    "hidden lg:block shrink-0 transition-[width] duration-300",
+    "border-r border-border/50 h-full bg-background-secondary/30",
+    sidebarCollapsed ? "w-16" : "w-64"
+  )}>
+    <Sidebar collapsed={sidebarCollapsed} />
+  </div>
 
-### Card (Tarjeta)
-
-```tsx
-// Card con efecto glassmorphism
-<div className="relative overflow-hidden rounded-xl border border-white/10 bg-background-secondary/80 backdrop-blur-xl">
-  {/* Glow effect */}
-  <div className="absolute inset-0 bg-gradient-to-br from-primary-700/5 via-transparent to-transparent" />
-  
-  {/* Content */}
-  <div className="relative p-6">
-    {children}
+  {/* 2. ÁREA PRINCIPAL - Header + Contenido */}
+  <div className="flex flex-1 flex-col overflow-hidden min-w-0">
+    <Header onMenuClick={() => setSidebarOpen(true)} />
+    <main className="flex-1 overflow-hidden">
+      {children}
+    </main>
   </div>
 </div>
 ```
 
-### Input (Campo de entrada)
+### Comportamiento Responsivo
 
-```tsx
-// Input con estilo oscuro
-<input
-  className={cn(
-    "flex h-10 w-full rounded-lg border border-white/10",
-    "bg-background-tertiary px-3 py-2 text-sm",
-    "placeholder:text-foreground-subtle",
-    "focus:outline-none focus:ring-2 focus:ring-primary-700/50 focus:border-primary-700",
-    "disabled:cursor-not-allowed disabled:opacity-50"
-  )}
-/>
+| Breakpoint | Sidebar | Header | Contenido |
+|------------|---------|--------|-----------|
+| `< md` (móvil) | Oculto, Sheet deslizable | Hamburguesa visible | Ancho completo |
+| `md - lg` (tablet) | Colapsado (w-16, solo iconos) | Logo en header | Expandido |
+| `> lg` (desktop) | Expandido (w-64) | Minimalista | Centrado con márgenes |
+
+---
+
+## 📐 Componentes de Layout
+
+### 1. Sidebar (Barra Lateral)
+
+**Ubicación:** [`src/components/layout/sidebar.tsx`](../src/components/layout/sidebar.tsx)
+
+**Estructura:**
+
+```
+┌─────────────────────────┐
+│  🌌 AETHER    [◀]       │  ← Header con logo + colapsar
+├─────────────────────────┤
+│  🏠 Dashboard           │
+│  💬 Arena Texto         │  ← Navegación principal
+│  💻 Arena Código        │
+│  🎨 Imágenes            │
+│  🎬 Video               │
+│  🎵 Audio               │
+├─────────────────────────┤  ← Separador sutil
+│  🔍 Buscar chats...     │
+│  ─────────────────────  │
+│  💬 Chat anterior 1     │  ← Historial con icono de arena
+│  💻 Chat anterior 2     │
+│  ...                    │
+├─────────────────────────┤
+│  👤 Usuario    ▼        │  ← Dropdown de perfil (INTEGRADO)
+│  ⚙️ Configuración       │
+│  🚪 Cerrar sesión       │
+└─────────────────────────┘
 ```
 
-### Select (Selector)
+**Características Clave:**
+
+- **Ancho:** 256px (w-64) expandido, 64px (w-16) colapsado
+- **Fondo:** `bg-background-secondary/50` con translucidez
+- **Borde:** `border-r border-primary-500/10` estructural
+- **Navegación activa:** `bg-primary-500/15 border-l-2 border-primary-500`
+- **Historial multi-arena:** Cada chat muestra icono según tipo de arena
+- **Perfil integrado:** Dropdown en la parte inferior (NO en header)
+
+**Colores por tipo de arena:**
+
+```typescript
+const getArenaColor = (type: ArenaType) => {
+  switch (type) {
+    case 'texto': return 'text-blue-400'
+    case 'codigo': return 'text-green-400'
+    case 'imagenes': return 'text-pink-400'
+    case 'video': return 'text-orange-400'
+    case 'audio': return 'text-cyan-400'
+  }
+}
+```
+
+### 2. Header (Cabecera)
+
+**Ubicación:** [`src/components/layout/header.tsx`](../src/components/layout/header.tsx)
+
+**Estructura:**
+
+```
+┌────────────────────────────────────────────────────────────────────┐
+│ [☰]                    [✨ Plan Gratuito · Actualizar]    [⚡ pts] [🔔] │
+└────────────────────────────────────────────────────────────────────┘
+   ↑                              ↑                           ↑
+   Hamburguesa              Plan (centrado)           Puntos + Notif.
+   (solo móvil)                                       (SIN perfil)
+```
+
+**Características Clave:**
+
+- **Altura:** 56px (h-14)
+- **Fondo:** `bg-background/80 backdrop-blur-xl` con blur
+- **Borde:** `border-b border-primary-500/10`
+- **Ultra minimalista:** SIN logo en desktop, SIN perfil de usuario
+- **Centrado:** Botón de upgrade de plan (oculto en móvil)
+- **Derecha:** Indicador de puntos + Campana de notificaciones
+
+**IMPORTANTE - Lo que NO debe tener el Header:**
+- ❌ Logo de Aether (está en el sidebar)
+- ❌ Avatar/perfil de usuario (está en el sidebar)
+- ❌ Breadcrumbs (eliminados por minimalismo)
+- ❌ Selector de modelo (está en el área de chat)
+
+### 3. Área de Contenido (Main)
+
+**Comportamiento:**
+
+- **Scroll independiente:** `overflow-y-auto` en el contenedor de mensajes
+- **Ancho máximo limitado:** `max-w-4xl mx-auto` (estilo Claude)
+- **Márgenes automáticos:** Centrado horizontal con padding responsivo
 
 ```tsx
-// Select con dropdown oscuro
-<Select>
-  <SelectTrigger className="w-full bg-background-tertiary border-white/10">
-    <SelectValue placeholder="Seleccionar modelo" />
-  </SelectTrigger>
-  <SelectContent className="bg-background-elevated border-white/10">
-    <SelectItem value="gpt-4o">GPT-4o</SelectItem>
-    <SelectItem value="claude-3-5-sonnet">Claude 3.5 Sonnet</SelectItem>
-  </SelectContent>
-</Select>
+// Arena de texto - Estructura
+<div className="flex h-full w-full overflow-hidden">
+  <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+    <div className="flex-1 overflow-y-auto overflow-x-hidden">
+      <div className="mx-auto w-full max-w-4xl h-full">
+        {/* Contenido del chat */}
+      </div>
+    </div>
+  </div>
+</div>
 ```
 
 ---
 
-## ✨ Efectos y Animaciones
+## 💬 Componentes de Chat
 
-### Gradientes
+### Chat Interface
 
-```css
-/* Gradiente primario para botones y highlights */
-.gradient-primary {
-  background: linear-gradient(135deg, #7c3aed 0%, #6b21a8 100%);
-}
+**Ubicación:** [`src/components/chat/chat-interface.tsx`](../src/components/chat/chat-interface.tsx)
 
-/* Gradiente sutil para fondos */
-.gradient-subtle {
-  background: linear-gradient(180deg, rgba(124, 58, 237, 0.1) 0%, transparent 100%);
-}
+**Estructura:**
 
-/* Gradiente de brillo para elementos activos */
-.gradient-glow {
-  background: linear-gradient(90deg, transparent, rgba(124, 58, 237, 0.3), transparent);
-}
+```
+┌────────────────────────────────────────────────────────────────────┐
+│                                                                    │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │ 👤 Tú                                                         │  │
+│  │ Explica la teoría de la relatividad...                       │  │
+│  │                                        15 tokens │ 0.02 pts  │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│                                                                    │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │ 🤖 Llama 3.3 70B                                              │  │
+│  │                                                               │  │
+│  │ La teoría de la relatividad, propuesta por Einstein...      │  │
+│  │                                                               │  │
+│  │ 📋 Copiar  🔄 Regenerar                                      │  │
+│  │                                       245 tokens │ 3.5 pts   │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│                                                                    │
+├────────────────────────────────────────────────────────────────────┤
+│ ┌────────────────────────────────────────────────────────────────┐ │
+│ │ [🤖 Modelo ▼]  [✨ Asistente ▼]                                │ │
+│ │                                                                │ │
+│ │ Escribe tu mensaje...                              [📎] [🎤]  │ │
+│ │                                                                │ │
+│ │ ──────────────────────────────────────────────────────────────│ │
+│ │ Estimado: ~50 tokens │ Costo: ~0.5 pts            [Enviar ➤] │ │
+│ └────────────────────────────────────────────────────────────────┘ │
+└────────────────────────────────────────────────────────────────────┘
 ```
 
-### Animaciones
+### Chat Input - Comportamiento Crítico
 
-```css
-/* Fade in */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+**El input del chat debe:**
 
-/* Pulse para indicadores */
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.4); }
-  50% { box-shadow: 0 0 0 8px rgba(124, 58, 237, 0); }
-}
+1. **Estar anclado abajo:** Usar `flex-col` con el input al final
+2. **Auto-ajustarse:** `<textarea>` que crece hacia arriba con el contenido
+3. **No romper el layout:** Usar `max-h-40` y `overflow-y-auto` para textos largos
 
-/* Shimmer para loading */
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-.shimmer {
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-}
+```tsx
+// Implementación del textarea auto-ajustable
+<textarea
+  value={inputValue}
+  onChange={(e) => {
+    setInputValue(e.target.value);
+    updateEstimatedTokens();
+  }}
+  onKeyDown={handleKeyDown}
+  placeholder="Escribe tu mensaje..."
+  className={cn(
+    "w-full resize-none bg-transparent",
+    "min-h-[24px] max-h-40",        // Altura mínima y máxima
+    "overflow-y-auto",               // Scroll interno si excede
+    "focus:outline-none"
+  )}
+  style={{ height: 'auto' }}
+  rows={1}
+/>
 ```
 
-### Transiciones
+---
 
-```css
-/* Transición suave para hover */
-.transition-smooth {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
+## 📊 Panel de Telemetría
 
-/* Transición para expandir */
-.transition-expand {
-  transition: width 0.3s ease-in-out, padding 0.3s ease-in-out;
+**Ubicación:** [`src/components/telemetry/telemetry-panel.tsx`](../src/components/telemetry/telemetry-panel.tsx)
+
+### Estado Avanzado (showAdvancedStats)
+
+El panel implementa un sistema de **toggle para métricas avanzadas** para evitar saturación cognitiva:
+
+```tsx
+// Estado para mostrar/ocultar estadísticas detalladas
+const [showAdvancedStats, setShowAdvancedStats] = useState(false)
+```
+
+**Vista simplificada (por defecto):**
+- Puntos restantes
+- Uso diario
+- Contexto usado
+
+**Vista avanzada (expandida):**
+- Última petición (tokens, coste)
+- Total de sesión (tokens, coste)
+- Información del modelo (ventana de contexto, output máximo)
+
+### Colores de Contexto
+
+```typescript
+const getProgressColor = (percentage: number) => {
+  if (percentage > 90) return 'bg-red-500'     // Crítico
+  if (percentage > 75) return 'bg-yellow-500'  // Advertencia
+  return 'bg-primary-500'                       // Normal
 }
 ```
 
@@ -451,145 +338,76 @@ const buttonVariants = cva(
 
 ## 📱 Responsive Design
 
-### Breakpoints
+### Breakpoints Utilizados
 
 ```css
 /* Tailwind breakpoints */
-screens: {
-  'sm': '640px',   /* Mobile landscape */
-  'md': '768px',   /* Tablet */
-  'lg': '1024px',  /* Desktop */
-  'xl': '1280px',  /* Large desktop */
-  '2xl': '1536px'  /* Extra large */
-}
+'sm': '640px',   /* Mobile landscape */
+'md': '768px',   /* Tablet */
+'lg': '1024px',  /* Desktop - Sidebar visible */
+'xl': '1280px',  /* Large desktop */
+'2xl': '1536px'  /* Extra large */
 ```
 
 ### Comportamiento del Sidebar
 
-| Breakpoint | Comportamiento |
-|------------|----------------|
-| < md | Oculto, se abre con botón hamburguesa |
-| md - lg | Colapsado (solo iconos) |
-| > lg | Expandido completo |
+| Breakpoint | Comportamiento | Ancho |
+|------------|----------------|-------|
+| `< lg` | Oculto, Sheet deslizable | 100% en Sheet |
+| `lg+` | Visible, colapsable | 256px / 64px |
 
-### Grid de Arenas
+---
+
+## ✨ Animaciones y Transiciones
+
+### Transiciones Principales
 
 ```css
-/* Grid responsivo para tarjetas de arena */
-.arena-grid {
-  display: grid;
-  gap: 1.5rem;
-  grid-template-columns: 1fr;
-}
+/* Sidebar collapse/expand */
+transition-[width] duration-300 ease-in-out
 
-@media (min-width: 768px) {
-  .arena-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
+/* Hover en elementos */
+transition-all duration-200
 
-@media (min-width: 1280px) {
-  .arena-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
+/* Fade in para contenido */
+animate-in fade-in duration-500
+
+/* Slide up para errores */
+animate-slide-up
+```
+
+### Efectos de Glow
+
+```css
+/* Glow sutil para elementos activos */
+.shadow-glow-sm {
+  box-shadow: 0 0 20px rgba(157, 78, 221, 0.15);
 }
 ```
 
 ---
 
-## 🖼️ Iconografía
+## 🚫 Lo que NO debe modificarse
 
-### Iconos Sugeridos (Lucide React)
+**REGLA DE ORO:** La interfaz actual agrada al usuario. Los siguientes elementos están **PROHIBIDOS de modificar**:
 
-```tsx
-import {
-  // Navegación
-  Home, MessageSquare, Code, Image, Video, Music,
-  
-  // Acciones
-  Send, Plus, Settings, Bell, Search, Menu,
-  
-  // Estados
-  Check, X, AlertTriangle, Info, Loader2,
-  
-  // Archivos
-  FileText, Download, Upload, Copy, Trash,
-  
-  // Usuario
-  User, LogOut, CreditCard, Crown
-} from 'lucide-react';
-```
-
-### Tamaños de Iconos
-
-| Uso | Tamaño | Clase |
-|-----|--------|-------|
-| Sidebar | 20px | `w-5 h-5` |
-| Botones | 16px | `w-4 h-4` |
-| Indicadores | 14px | `w-3.5 h-3.5` |
-| Headers | 24px | `w-6 h-6` |
+1. ❌ **Colores base** - La paleta violeta/oscura está consolidada
+2. ❌ **Layout del Sidebar** - El perfil integrado funciona correctamente
+3. ❌ **Header minimalista** - Sin añadir elementos innecesarios
+4. ❌ **Chat Input auto-ajustable** - El comportamiento actual es correcto
+5. ❌ **Translucidez del Sidebar** - El efecto visual está aprobado
 
 ---
 
-## 🎭 Estados de Componentes
+## 📝 Checklist de Implementación UI
 
-### Button States
-
-```tsx
-// Estados visuales del botón
-<button className={cn(
-  "transition-all duration-200",
-  "hover:scale-[1.02] active:scale-[0.98]",
-  "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100",
-  isLoading && "cursor-wait opacity-80"
-)}>
-  {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-  {children}
-</button>
-```
-
-### Input States
-
-```tsx
-// Estados del campo de entrada
-<input className={cn(
-  hasError && "border-error focus:ring-error/50 focus:border-error",
-  isSuccess && "border-success focus:ring-success/50 focus:border-success",
-  isDisabled && "opacity-50 cursor-not-allowed"
-)} />
-```
-
----
-
-## 📋 Checklist de Implementación UI
-
-### Fase 1: Setup
-- [ ] Configurar Tailwind con colores personalizados
-- [ ] Instalar y configurar Shadcn UI
-- [ ] Crear archivo de variables CSS globales
-- [ ] Configurar fuentes (Inter, JetBrains Mono)
-
-### Fase 2: Componentes Base
-- [ ] Personalizar Button con variantes
-- [ ] Personalizar Card con glassmorphism
-- [ ] Personalizar Input y Select
-- [ ] Crear componente Badge
-- [ ] Crear componente Progress
-
-### Fase 3: Layout
-- [ ] Crear componente Sidebar
-- [ ] Crear componente Header
-- [ ] Crear layout principal (dashboard)
-- [ ] Implementar responsive sidebar
-
-### Fase 4: Componentes de Chat
-- [ ] Crear ChatMessage component
-- [ ] Crear ChatInput component
-- [ ] Crear ContextBar component
-- [ ] Crear TelemetryPanel component
-
-### Fase 5: Componentes de Facturación
-- [ ] Crear PricingCard component
-- [ ] Crear PackConfigurator component
-- [ ] Crear PointsBalance component
-- [ ] Crear TransactionHistory component
+- [x] Layout Holy Grail con Flexbox
+- [x] Sidebar colapsable con transición
+- [x] Header ultra minimalista
+- [x] Chat Input auto-ajustable anclado abajo
+- [x] Panel de telemetría con toggle avanzado
+- [x] Selector de modelo popup
+- [x] Historial multi-arena con iconos
+- [x] Dropdown de perfil en Sidebar
+- [x] Null-checks en todos los componentes
+- [x] Diseño responsivo completo
