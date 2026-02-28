@@ -119,7 +119,7 @@ export default function HistorialPage() {
   })
   
   return (
-    <div className="h-[calc(100vh-8rem)] flex flex-col p-4 md:p-6">
+    <div className="flex flex-col p-4 md:p-6 min-h-full">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold flex items-center gap-2">

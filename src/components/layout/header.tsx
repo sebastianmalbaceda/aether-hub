@@ -52,14 +52,6 @@ export function Header({ onMenuClick }: HeaderProps) {
         >
           <Menu className="h-5 w-5" />
         </Button>
-
-        {/* Logo para móvil (desktop lo tiene en sidebar) */}
-        <div className="flex lg:hidden items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary-500 to-primary-700">
-            <Zap className="h-4 w-4 text-white" />
-          </div>
-          <span className="text-lg font-bold gradient-text">Aether</span>
-        </div>
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════

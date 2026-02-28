@@ -84,7 +84,38 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  return supabaseResponse
+  // Add security headers
+  const response = supabaseResponse
+  
+  // Prevent clickjacking
+  response.headers.set('X-Frame-Options', 'DENY')
+  
+  // Prevent MIME type sniffing
+  response.headers.set('X-Content-Type-Options', 'nosniff')
+  
+  // Enable XSS filter
+  response.headers.set('X-XSS-Protection', '1; mode=block')
+  
+  // Referrer policy
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  
+  // Permissions policy (restrict features)
+  response.headers.set('Permissions-Policy', 'camera=(), microphone=(self), geolocation=()')
+  
+  // Content Security Policy - basic (can be enhanced)
+  const cspHeader = `
+    default-src 'self';
+    script-src 'self' 'unsafe-eval' 'unsafe-inline' https://va.vercel-scripts.com;
+    style-src 'self' 'unsafe-inline';
+    img-src 'self' blob: data: https:;
+    font-src 'self' data:;
+    connect-src 'self' https://*.supabase.co https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com https://api.groq.com https://api.stripe.com;
+    frame-ancestors 'none';
+  `.replace(/\s{2,}/g, ' ').trim()
+  
+  response.headers.set('Content-Security-Policy', cspHeader)
+
+  return response
 }
 
 export const config = {

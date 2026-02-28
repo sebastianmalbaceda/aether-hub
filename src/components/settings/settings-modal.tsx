@@ -32,6 +32,8 @@ const settingsNavItems = [
   { id: 'general', label: 'General', icon: Settings },
   { id: 'appearance', label: 'Apariencia', icon: Palette },
   { id: 'language', label: 'Idioma', icon: Globe },
+  { id: 'privacy', label: 'Privacidad', icon: Sparkles },
+  { id: 'shortcuts', label: 'Atajos', icon: ChevronRight },
 ]
 
 // Job roles
@@ -94,14 +96,35 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[85vh] p-0 bg-background border-primary-500/20 overflow-hidden">
+      <DialogContent showCloseButton={false} className="w-[95vw] max-w-4xl h-auto max-h-[95vh] p-0 bg-background border-primary-500/20 overflow-hidden">
         <VisuallyHidden>
           <DialogTitle>Configuración de Aether</DialogTitle>
           <DialogDescription>Personaliza tu perfil, apariencia y preferencias de idioma.</DialogDescription>
         </VisuallyHidden>
-        <div className="flex h-full">
-          {/* Sidebar de navegación */}
-          <aside className="w-64 shrink-0 border-r border-primary-500/10 bg-background-secondary/30 flex flex-col">
+        <div className="flex flex-col md:flex-row h-full">
+          {/* Mobile tabs */}
+          <div className="md:hidden border-b border-primary-500/10 overflow-x-auto">
+            <div className="flex p-2 gap-1 min-w-max">
+              {settingsNavItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveSection(item.id)}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap",
+                    activeSection === item.id
+                      ? "bg-primary-500/15 text-primary-400"
+                      : "text-muted-foreground hover:bg-primary-500/5 hover:text-foreground"
+                  )}
+                >
+                  <item.icon className="h-4 w-4" />
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          {/* Sidebar de navegación - Desktop */}
+          <aside className="hidden md:flex w-56 lg:w-64 shrink-0 border-r border-primary-500/10 bg-background-secondary/30 flex-col">
             <div className="p-4 border-b border-primary-500/10">
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 <Settings className="h-5 w-5 text-primary-400" />
@@ -143,8 +166,8 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
           {/* Contenido principal */}
           <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-primary-500/10">
+            {/* Header - Desktop only */}
+            <div className="hidden md:flex items-center justify-between p-4 border-b border-primary-500/10">
               <h3 className="font-semibold">
                 {settingsNavItems.find(item => item.id === activeSection)?.label}
               </h3>
@@ -158,8 +181,23 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               </Button>
             </div>
 
+            {/* Mobile close button */}
+            <div className="md:hidden flex items-center justify-between p-3 border-b border-primary-500/10">
+              <h3 className="font-semibold text-sm">
+                {settingsNavItems.find(item => item.id === activeSection)?.label}
+              </h3>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onOpenChange(false)}
+                className="h-7 w-7 hover:bg-primary-500/10"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-4 md:p-6">
               {/* GENERAL / PERFIL */}
               {activeSection === 'general' && (
                 <div className="space-y-6 max-w-xl">
@@ -322,6 +360,137 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                           <Check className="h-4 w-4 text-primary-400 ml-auto" />
                         )}
                       </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* PRIVACIDAD */}
+              {activeSection === 'privacy' && (
+                <div className="space-y-6 max-w-xl">
+                  <div>
+                    <h4 className="text-sm font-medium mb-1">Privacidad y datos</h4>
+                    <p className="text-xs text-muted-foreground mb-4">
+                      Controla cómo se manejan tus datos y conversaciones
+                    </p>
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* Historial de conversaciones */}
+                    <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/30 border border-primary-500/10">
+                      <div>
+                        <div className="text-sm font-medium">Guardar historial</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          Las conversaciones se guardan para futuras referencias
+                        </div>
+                      </div>
+                      <button className="relative w-11 h-6 rounded-full bg-primary-500 transition-colors">
+                        <span className="absolute right-1 top-1 w-4 h-4 rounded-full bg-white transition-transform" />
+                      </button>
+                    </div>
+
+                    {/* Modo incógnito por defecto */}
+                    <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/30 border border-primary-500/10">
+                      <div>
+                        <div className="text-sm font-medium">Modo incógnito por defecto</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          Iniciar siempre en modo incógnito
+                        </div>
+                      </div>
+                      <button className="relative w-11 h-6 rounded-full bg-secondary transition-colors">
+                        <span className="absolute left-1 top-1 w-4 h-4 rounded-full bg-muted-foreground transition-transform" />
+                      </button>
+                    </div>
+
+                    {/* Compartir datos para mejorar */}
+                    <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/30 border border-primary-500/10">
+                      <div>
+                        <div className="text-sm font-medium">Compartir datos anónimos</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          Ayuda a mejorar Aether compartiendo datos anónimos
+                        </div>
+                      </div>
+                      <button className="relative w-11 h-6 rounded-full bg-primary-500 transition-colors">
+                        <span className="absolute right-1 top-1 w-4 h-4 rounded-full bg-white transition-transform" />
+                      </button>
+                    </div>
+
+                    {/* Exportar datos */}
+                    <div className="pt-4 border-t border-primary-500/10">
+                      <button className="w-full flex items-center justify-between p-4 rounded-lg bg-secondary/30 border border-primary-500/10 hover:border-primary-500/30 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-primary-500/10 flex items-center justify-center">
+                            <Save className="h-4 w-4 text-primary-400" />
+                          </div>
+                          <div className="text-left">
+                            <div className="text-sm font-medium">Exportar mis datos</div>
+                            <div className="text-xs text-muted-foreground">
+                              Descarga una copia de todos tus datos
+                            </div>
+                          </div>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                    </div>
+
+                    {/* Eliminar cuenta */}
+                    <div className="pt-2">
+                      <button className="w-full flex items-center justify-between p-4 rounded-lg bg-destructive/5 border border-destructive/20 hover:border-destructive/40 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center">
+                            <X className="h-4 w-4 text-destructive" />
+                          </div>
+                          <div className="text-left">
+                            <div className="text-sm font-medium text-destructive">Eliminar mi cuenta</div>
+                            <div className="text-xs text-muted-foreground">
+                              Esta acción no se puede deshacer
+                            </div>
+                          </div>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-destructive" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ATAJOS DE TECLADO */}
+              {activeSection === 'shortcuts' && (
+                <div className="space-y-6 max-w-xl">
+                  <div>
+                    <h4 className="text-sm font-medium mb-1">Atajos de teclado</h4>
+                    <p className="text-xs text-muted-foreground mb-4">
+                      Teclas rápidas para navegar más eficientemente
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    {[
+                      { keys: ['⌘', 'K'], action: 'Abrir búsqueda rápida' },
+                      { keys: ['⌘', 'N'], action: 'Nueva conversación' },
+                      { keys: ['⌘', '⇧', 'S'], action: 'Guardar conversación' },
+                      { keys: ['⌘', '⇧', ','], action: 'Abrir ajustes' },
+                      { keys: ['⌘', '/'], action: 'Alternar sidebar' },
+                      { keys: ['Enter'], action: 'Enviar mensaje' },
+                      { keys: ['⇧', 'Enter'], action: 'Nueva línea en mensaje' },
+                      { keys: ['⌘', '⇧', 'C'], action: 'Copiar último mensaje' },
+                      { keys: ['Esc'], action: 'Cerrar modal/diálogo' },
+                    ].map((shortcut, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-primary-500/10">
+                        <span className="text-sm">{shortcut.action}</span>
+                        <div className="flex items-center gap-1">
+                          {shortcut.keys.map((key, keyIndex) => (
+                            <span key={keyIndex}>
+                              <kbd className="px-2 py-1 text-xs font-mono bg-secondary rounded border border-primary-500/20">
+                                {key}
+                              </kbd>
+                              {keyIndex < shortcut.keys.length - 1 && (
+                                <span className="mx-0.5 text-muted-foreground">+</span>
+                              )}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>

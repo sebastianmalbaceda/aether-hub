@@ -46,12 +46,12 @@ declare global {
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { 
-  Send, 
-  Copy, 
+import {
+  Send,
+  Copy,
   Check,
-  RotateCcw, 
-  ThumbsUp, 
+  RotateCcw,
+  ThumbsUp,
   ThumbsDown,
   User,
   Bot,
@@ -80,6 +80,9 @@ import {
   Coins,
   Clock,
   Zap,
+  Globe,
+  Search,
+  AlertCircle,
 } from 'lucide-react'
 import {
   Popover,
@@ -94,34 +97,20 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
-import Link from 'next/link'
 import { useToast } from '@/hooks/use-toast'
+import { PricingModal } from '@/components/pricing/pricing-modal'
 import { useChatStore } from '@/stores/chat-store'
 import { useUserStore } from '@/stores/user-store'
+import { getModelById, AI_MODELS } from '@/config/ai-models'
 import type { Message } from '@/types'
 
 // Dynamic import for react-markdown to avoid SSR issues
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
-// Modelos gratuitos (Groq - Free Tier)
-const freeModels = [
-  { id: 'qwen/qwen3-32b', name: 'Qwen 3 32B', provider: 'Groq', description: 'Excelente para razonamiento', tier: 'free' },
-  { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B', provider: 'Groq', description: 'Respuestas rápidas', tier: 'free' },
-  { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B', provider: 'Groq', description: 'Potente y versátil', tier: 'free' },
-  { id: 'moonshotai/kimi-k2-instruct-0905', name: 'Kimi K2 Instruct', provider: 'Groq', description: 'Razonamiento avanzado', tier: 'free' },
-  { id: 'openai/gpt-oss-120b', name: 'GPT-OSS 120B', provider: 'Groq', description: 'Modelo de razonamiento', tier: 'free' },
-  { id: 'openai/gpt-oss-20b', name: 'GPT-OSS 20B', provider: 'Groq', description: 'Razonamiento medio', tier: 'free' },
-]
-
-// Modelos premium (bloqueados - Próximamente)
-const premiumModels = [
-  { id: 'claude-4.6-opus', name: 'Claude 4.6 Opus', provider: 'Anthropic', description: 'El más potente de Anthropic', tier: 'flagship' },
-  { id: 'claude-4.6-sonnet', name: 'Claude 4.6 Sonnet', provider: 'Anthropic', description: 'Equilibrio perfecto', tier: 'premium' },
-  { id: 'chatgpt-5.2', name: 'ChatGPT 5.2', provider: 'OpenAI', description: 'El más avanzado de OpenAI', tier: 'flagship' },
-  { id: 'chatgpt-5.2-fast', name: 'ChatGPT 5.2 Fast', provider: 'OpenAI', description: 'Optimizado para velocidad', tier: 'premium' },
-  { id: 'gemini-3.1-pro', name: 'Gemini 3.1 Pro', provider: 'Google', description: 'El más avanzado de Google', tier: 'flagship' },
-]
+// Modelos derivados de la configuración centralizada
+const freeModels = AI_MODELS.filter(m => m.isAvailable && m.tier === 'free')
+const premiumModels = AI_MODELS.filter(m => !m.isAvailable || m.tier === 'premium' || m.tier === 'flagship')
 
 // Asistentes disponibles
 const assistants = [
@@ -141,6 +130,7 @@ interface ChatInterfaceProps {
   incognitoMode?: boolean
   onIncognitoChange?: (mode: boolean) => void
   className?: string
+  headerRightContent?: React.ReactNode
 }
 
 // Feedback state type
@@ -259,29 +249,40 @@ function MessageBubble({
   }
   
   return (
-    <div
-      className={cn(
-        'flex gap-3',
-        message.role === 'USER' ? 'justify-end' : 'justify-start'
-      )}
-    >
-      {message.role === 'ASSISTANT' && (
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center flex-shrink-0">
-          <Bot className="w-4 h-4 text-white" />
-        </div>
-      )}
-      
+    <div className={cn(
+      'relative flex items-start',
+      message.role === 'USER' ? 'justify-end' : 'justify-start'
+    )}>
+      {/* Icono posicionado absolutamente fuera del contenedor */}
       <div
         className={cn(
-          'max-w-[80%] rounded-2xl px-4 py-3',
+          'absolute top-0 w-8 h-8 rounded-full flex items-center justify-center',
+          message.role === 'USER' ? '-right-10' : '-left-10',
+          message.role === 'ASSISTANT'
+            ? 'bg-gradient-to-br from-primary-500 to-primary-700'
+            : 'bg-muted'
+        )}
+      >
+        {message.role === 'ASSISTANT' ? (
+          <Bot className="w-4 h-4 text-white" />
+        ) : (
+          <User className="w-4 h-4 text-muted-foreground" />
+        )}
+      </div>
+      
+      {/* Contenedor del mensaje - mismo ancho que la barra de chat */}
+      <div
+        className={cn(
+          'rounded-2xl px-4 py-3',
           message.role === 'USER'
             ? 'bg-primary-700 text-white'
             : 'bg-secondary/80 text-foreground'
         )}
+        style={{ width: 'fit-content', maxWidth: '100%' }}
       >
         {message.role === 'ASSISTANT' ? (
           <div className="prose prose-sm dark:prose-invert max-w-none">
-            <ReactMarkdown 
+            <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={markdownComponents}
             >
@@ -310,9 +311,9 @@ function MessageBubble({
         {/* Action buttons */}
         {message.role === 'ASSISTANT' && message.content && (
           <div className="flex items-center gap-1 mt-2 pt-2 bg-muted/20 rounded-md p-1 -mx-1">
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               className="h-7 w-7"
               onClick={handleCopy}
               title="Copiar"
@@ -323,18 +324,18 @@ function MessageBubble({
                 <Copy className="h-3.5 w-3.5" />
               )}
             </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               className="h-7 w-7"
               onClick={onRegenerate}
               title="Regenerar"
             >
               <RotateCcw className="h-3.5 w-3.5" />
             </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               className={cn(
                 "h-7 w-7",
                 feedback === 'positive' && "text-green-400 bg-green-400/10"
@@ -344,9 +345,9 @@ function MessageBubble({
             >
               <ThumbsUp className="h-3.5 w-3.5" />
             </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               className={cn(
                 "h-7 w-7",
                 feedback === 'negative' && "text-red-400 bg-red-400/10"
@@ -359,12 +360,6 @@ function MessageBubble({
           </div>
         )}
       </div>
-
-      {message.role === 'USER' && (
-        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-          <User className="w-4 h-4 text-muted-foreground" />
-        </div>
-      )}
     </div>
   )
 }
@@ -422,15 +417,16 @@ function AttachmentPreview({
   )
 }
 
-export function ChatInterface({ 
-  messages, 
-  isLoading = false, 
+export function ChatInterface({
+  messages,
+  isLoading = false,
   onSendMessage,
   onRegenerate,
   onDeleteChat,
   incognitoMode = false,
   onIncognitoChange,
-  className 
+  className,
+  headerRightContent
 }: ChatInterfaceProps) {
   const [input, setInput] = useState('')
   const [, setFeedbackVersion] = useState(0)
@@ -451,7 +447,18 @@ export function ChatInterface({
   const [modelSelectorOpen, setModelSelectorOpen] = useState(false)
   const [assistantSelectorOpen, setAssistantSelectorOpen] = useState(false)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [showPricingModal, setShowPricingModal] = useState(false)
   const [selectedAssistant, setSelectedAssistant] = useState('standard')
+  
+  // Reasoning and Web Search state
+  const [enableReasoning, setEnableReasoning] = useState(false)
+  const [enableWebSearch, setEnableWebSearch] = useState(false)
+  
+  // Get current model capabilities
+  const currentModel = selectedModelId ? getModelById(selectedModelId) : null
+  const modelSupportsReasoning = currentModel?.supportsReasoning ?? false
+  const modelSupportsWebSearch = currentModel?.supportsWebSearch ?? false
+  const modelSupportsVision = currentModel?.supportsVision ?? false
   
   // Attachments state
   const [attachments, setAttachments] = useState<File[]>([])
@@ -570,6 +577,19 @@ export function ChatInterface({
 
   // File attachment handlers
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Check if model supports vision/files
+    if (!modelSupportsVision) {
+      toast({
+        title: 'Modelo sin soporte de archivos',
+        description: `${currentModel?.name || 'Este modelo'} no soporta procesamiento de imágenes o archivos. Los adjuntos no serán procesados.`,
+        variant: 'destructive',
+      })
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+      return
+    }
+    
     const files = Array.from(e.target.files || [])
     setAttachments(prev => [...prev, ...files])
     if (fileInputRef.current) {
@@ -644,93 +664,101 @@ export function ChatInterface({
   const hasContent = input.trim() || attachments.length > 0
 
   return (
-    <div className={cn('flex flex-col h-full', className)}>
-      {/* MESSAGES AREA */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
-        {messages.length === 0 ? (
-          /* WELCOME STATE */
-          <div className="flex flex-col items-center justify-center h-full text-center animate-fade-in">
-            {/* Incógnito Banner */}
-            {incognitoMode && (
-              <div className="mb-6 flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/50 border border-primary-500/20">
-                <Ghost className="h-4 w-4 text-primary-400" />
-                <span className="text-sm font-medium">Estás de incógnito</span>
-              </div>
-            )}
-            
-            {/* Icon */}
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center mb-6 shadow-glow-sm">
-              <Sparkles className="w-8 h-8 text-white" />
-            </div>
-            
-            {/* Title */}
-            <h1 className="text-2xl md:text-3xl font-serif font-medium mb-3 text-foreground">
-              {incognitoMode ? 'Modo Incógnito' : '¿En qué creamos hoy?'}
-            </h1>
-            
-            {/* Subtitle */}
-            <p className="text-muted-foreground max-w-md mb-8">
-              {incognitoMode 
-                ? 'Las conversaciones de incógnito no se guardan en el historial.'
-                : 'El modelo está listo. Comienza a crear.'
-              }
-            </p>
-
-            {/* Quick Actions */}
-            <div className="flex flex-wrap justify-center gap-2 max-w-lg">
-              {quickActions.map((action) => (
-                <button
-                  key={action.id}
-                  onClick={() => handleQuickAction(action.id)}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-muted-foreground bg-transparent border border-primary-500/20 hover:bg-primary-500/5 hover:text-foreground hover:border-primary-500/40 transition-all duration-200"
-                >
-                  <action.icon className="h-4 w-4" />
-                  <span>{action.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : (
-          /* MESSAGES LIST */
-          <>
-            {messages.map((message) => (
-              <MessageBubble
-                key={message.id}
-                message={message}
-                onCopy={copyToClipboard}
-                onRegenerate={onRegenerate}
-                onFeedback={handleFeedback}
-              />
-            ))}
-
-            {/* Loading indicator */}
-            {isLoading && (
-              <div className="flex gap-3 justify-start animate-fade-in">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center flex-shrink-0">
-                  <Bot className="w-4 h-4 text-white" />
+    <div className={cn('flex flex-col h-full overflow-y-auto', className)}>
+      {/* CONTENEDOR PRINCIPAL - Centrado con max-w-4xl para mensajes y barra */}
+      <div className="flex-1">
+        <div className="mx-auto w-full max-w-4xl px-4 md:px-6 py-4 md:py-6 space-y-4">
+          {/* Contenedor interno con padding para iconos fuera del ancho */}
+          <div className="px-12 space-y-4">
+          {messages.length === 0 ? (
+            /* WELCOME STATE */
+            <div className="flex flex-col items-center justify-center text-center animate-fade-in min-h-[60vh]">
+              {/* Incógnito Banner */}
+              {incognitoMode && (
+                <div className="mb-6 flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/50">
+                  <Ghost className="h-4 w-4 text-primary-400" />
+                  <span className="text-sm font-medium">Estás de incógnito</span>
                 </div>
-                <div className="bg-secondary/80 rounded-2xl px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <div className="flex gap-1">
-                      <span className="w-2 h-2 rounded-full bg-primary-400 animate-typing-dot" />
-                      <span className="w-2 h-2 rounded-full bg-primary-400 animate-typing-dot" style={{ animationDelay: '0.2s' }} />
-                      <span className="w-2 h-2 rounded-full bg-primary-400 animate-typing-dot" style={{ animationDelay: '0.4s' }} />
+              )}
+              
+              {/* Icon */}
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center mb-6 shadow-glow-sm">
+                <Sparkles className="w-8 h-8 text-white" />
+              </div>
+              
+              {/* Title */}
+              <h1 className="text-2xl md:text-3xl font-serif font-medium mb-3 text-foreground">
+                {incognitoMode ? 'Modo Incógnito' : '¿En qué creamos hoy?'}
+              </h1>
+              
+              {/* Subtitle */}
+              <p className="text-muted-foreground max-w-md mb-8">
+                {incognitoMode
+                  ? 'Las conversaciones de incógnito no se guardan en el historial.'
+                  : 'El modelo está listo. Comienza a crear.'
+                }
+              </p>
+
+              {/* Quick Actions */}
+              <div className="flex flex-wrap justify-center gap-2 max-w-lg">
+                {quickActions.map((action) => (
+                  <button
+                    key={action.id}
+                    onClick={() => handleQuickAction(action.id)}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-muted-foreground bg-secondary/50 hover:bg-secondary/80 hover:text-foreground transition-all duration-200"
+                  >
+                    <action.icon className="h-4 w-4" />
+                    <span>{action.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            /* MESSAGES LIST */
+            <>
+              {messages.map((message) => (
+                <MessageBubble
+                  key={message.id}
+                  message={message}
+                  onCopy={copyToClipboard}
+                  onRegenerate={onRegenerate}
+                  onFeedback={handleFeedback}
+                />
+              ))}
+
+              {/* Loading indicator */}
+              {isLoading && (
+                <div className="flex gap-2 items-start animate-fade-in">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center flex-shrink-0">
+                    <Bot className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="bg-secondary/80 rounded-2xl px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1">
+                        <span className="w-2 h-2 rounded-full bg-primary-400 animate-typing-dot" />
+                        <span className="w-2 h-2 rounded-full bg-primary-400 animate-typing-dot" style={{ animationDelay: '0.2s' }} />
+                        <span className="w-2 h-2 rounded-full bg-primary-400 animate-typing-dot" style={{ animationDelay: '0.4s' }} />
+                      </div>
+                      <span className="text-muted-foreground text-sm">Pensando...</span>
                     </div>
-                    <span className="text-muted-foreground text-sm">Pensando...</span>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            <div ref={messagesEndRef} />
-          </>
-        )}
+              <div ref={messagesEndRef} />
+            </>
+          )}
+          </div>
+        </div>
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════
-          OMNI-BARRA DE CHAT (Command Center Unificado)
+          OMNI-BARRA DE CHAT - Sticky dentro del contenedor del chat
+          Los mensajes pasan por detrás al hacer scroll
       ═══════════════════════════════════════════════════════════════ */}
-      <div className="p-3 md:p-4 bg-background/80 backdrop-blur-xl">
+      <div className="sticky bottom-0 bg-gradient-to-t from-background via-background/95 to-background/80 backdrop-blur-xl pt-3 z-10">
+        {/* Contenedor con mismo max-w-4xl y padding que los mensajes */}
+        <div className="mx-auto w-full max-w-4xl px-4 md:px-6 pb-4 md:pb-6">
         {/* Incógnito notice */}
         {incognitoMode && messages.length > 0 && (
           <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground justify-center">
@@ -741,14 +769,25 @@ export function ChatInterface({
         
         {/* Attachments preview */}
         {attachments.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-2">
-            {attachments.map((file, index) => (
-              <AttachmentPreview 
-                key={index} 
-                file={file} 
-                onRemove={() => handleRemoveAttachment(index)} 
-              />
-            ))}
+          <div className="flex flex-col gap-2 mb-2">
+            {/* Warning if model doesn't support files */}
+            {!modelSupportsVision && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                <AlertCircle className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                <p className="text-xs text-amber-400">
+                  <span className="font-medium">Los archivos no se enviarán.</span> El modelo actual no soporta procesamiento de archivos. Cambia a un modelo con soporte de visión o elimina los adjuntos.
+                </p>
+              </div>
+            )}
+            <div className="flex flex-wrap gap-2">
+              {attachments.map((file, index) => (
+                <AttachmentPreview
+                  key={index}
+                  file={file}
+                  onRemove={() => handleRemoveAttachment(index)}
+                />
+              ))}
+            </div>
           </div>
         )}
         
@@ -759,9 +798,9 @@ export function ChatInterface({
           <div className="relative bg-[#161618] border border-white/10 rounded-2xl overflow-hidden transition-all duration-200 focus-within:border-primary-500/50 focus-within:shadow-[0_0_20px_rgba(157,78,221,0.15)]">
             
             {/* ═══════════════════════════════════════════════════════════════
-                ÁREA SUPERIOR: Input & Attachments
+                ÁREA DE INPUT: Textarea con botones de audio y enviar
             ═══════════════════════════════════════════════════════════════ */}
-            <div className="flex items-start gap-2 p-3 pb-2">
+            <div className="flex items-end gap-2 p-3 pb-2">
               {/* Attach button */}
               <input
                 ref={fileInputRef}
@@ -771,14 +810,27 @@ export function ChatInterface({
                 onChange={handleFileSelect}
                 className="hidden"
               />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex-shrink-0 h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
-                title="Adjuntar archivo"
-              >
-                <Paperclip className="h-4 w-4" />
-              </button>
+              {modelSupportsVision ? (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex-shrink-0 h-8 w-8 rounded-lg flex items-center justify-center transition-colors text-muted-foreground hover:text-foreground hover:bg-white/5"
+                  title="Adjuntar archivo"
+                >
+                  <Paperclip className="h-4 w-4" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="flex-shrink-0 h-8 w-8 rounded-lg flex items-center justify-center transition-colors relative text-muted-foreground/30 cursor-not-allowed"
+                  title="Este modelo no soporta archivos"
+                  onClick={(e) => e.preventDefault()}
+                >
+                  <Paperclip className="h-4 w-4" />
+                  <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-amber-500/70" />
+                </button>
+              )}
               
               {/* Textarea transparente */}
               <textarea
@@ -794,29 +846,66 @@ export function ChatInterface({
                 className="flex-1 bg-transparent text-base resize-none outline-none placeholder:text-muted-foreground/50 disabled:opacity-50 min-h-[24px] max-h-[200px]"
                 style={{ height: 'auto' }}
               />
+              
+              {/* Botón de Voz - Nivel del textarea */}
+              <button
+                type="button"
+                onClick={toggleRecording}
+                className={cn(
+                  "flex-shrink-0 h-8 w-8 rounded-lg flex items-center justify-center transition-all duration-200",
+                  isRecording
+                    ? "bg-red-500/20 text-red-400 animate-pulse"
+                    : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                )}
+                title={isRecording ? "Detener grabación" : "Entrada por voz"}
+              >
+                {isRecording ? (
+                  <Square className="h-4 w-4" />
+                ) : (
+                  <Mic className="h-4 w-4" />
+                )}
+              </button>
+              
+              {/* Botón de Enviar - Nivel del textarea */}
+              <button
+                type="submit"
+                disabled={!hasContent || isLoading}
+                className={cn(
+                  "flex-shrink-0 h-8 w-8 rounded-lg flex items-center justify-center transition-all duration-200",
+                  hasContent && !isLoading
+                    ? "bg-primary-600 text-white hover:bg-primary-500 shadow-glow-sm"
+                    : "bg-secondary/50 text-muted-foreground cursor-not-allowed"
+                )}
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ArrowUp className="h-4 w-4" />
+                )}
+              </button>
             </div>
             
             {/* ═══════════════════════════════════════════════════════════════
-                ÁREA INFERIOR: Barra de Herramientas Integrada
+                ÁREA INFERIOR: Selectores y botones de acción
             ═══════════════════════════════════════════════════════════════ */}
             <div className="flex items-center justify-between px-3 pb-3 pt-1">
-              {/* LADO IZQUIERDO: Controles de Contexto */}
+              {/* LADO IZQUIERDO: Selectores */}
               <div className="flex items-center gap-1">
                 {/* Selector de Modelo */}
                 <Popover open={modelSelectorOpen} onOpenChange={setModelSelectorOpen}>
                   <PopoverTrigger asChild>
                     <button
                       type="button"
-                      className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200"
+                      className="flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200"
                     >
                       <SelectedModelIcon className="h-3.5 w-3.5 text-primary-400" />
-                      <span className="max-w-[100px] truncate">{selectedModel.name}</span>
-                      <ChevronDown className="h-3 w-3" />
+                      <span className="max-w-[60px] sm:max-w-[100px] truncate">{selectedModel.name}</span>
+                      <ChevronDown className="h-3 w-3 hidden sm:block" />
                     </button>
                   </PopoverTrigger>
                   
-                  <PopoverContent 
-                    align="start" 
+                  <PopoverContent
+                    align="start"
                     className="w-72 p-0 bg-popover/95 backdrop-blur-xl border-primary-500/20 shadow-xl"
                   >
                     {/* Header */}
@@ -849,8 +938,8 @@ export function ChatInterface({
                               }}
                               className={cn(
                                 "w-full flex items-start gap-2.5 p-2 rounded-lg text-left transition-all duration-200",
-                                isSelected 
-                                  ? "bg-primary-500/15 border border-primary-500/30" 
+                                isSelected
+                                  ? "bg-primary-500/15 border border-primary-500/30"
                                   : "hover:bg-secondary/80 border border-transparent"
                               )}
                             >
@@ -953,16 +1042,16 @@ export function ChatInterface({
                   <PopoverTrigger asChild>
                     <button
                       type="button"
-                      className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200"
+                      className="flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200"
                     >
                       <AssistantIcon className="h-3.5 w-3.5 text-cyan-400" />
-                      <span className="max-w-[100px] truncate">{selectedAssistantInfo.name}</span>
-                      <ChevronDown className="h-3 w-3" />
+                      <span className="max-w-[60px] sm:max-w-[100px] truncate">{selectedAssistantInfo.name}</span>
+                      <ChevronDown className="h-3 w-3 hidden sm:block" />
                     </button>
                   </PopoverTrigger>
                   
-                  <PopoverContent 
-                    align="start" 
+                  <PopoverContent
+                    align="start"
                     className="w-56 p-2 bg-popover/95 backdrop-blur-xl border-primary-500/20 shadow-xl"
                   >
                     {assistants.map((assistant) => {
@@ -978,8 +1067,8 @@ export function ChatInterface({
                           }}
                           className={cn(
                             "w-full flex items-center gap-2 p-2 rounded-lg text-left transition-all duration-200",
-                            isSelected 
-                              ? "bg-primary-500/15 border border-primary-500/30" 
+                            isSelected
+                              ? "bg-primary-500/15 border border-primary-500/30"
                               : "hover:bg-secondary/80 border border-transparent"
                           )}
                         >
@@ -1006,26 +1095,49 @@ export function ChatInterface({
                     })}
                   </PopoverContent>
                 </Popover>
-              </div>
-              
-              {/* LADO DERECHO: Acciones y Utilidades */}
-              <div className="flex items-center gap-0.5">
-                {/* Toggle Incógnito */}
+
+                {/* Botón Razonar - Siempre visible, inhabilitado si no soporta */}
                 <button
                   type="button"
-                  onClick={() => onIncognitoChange?.(!incognitoMode)}
+                  onClick={() => modelSupportsReasoning && setEnableReasoning(!enableReasoning)}
+                  disabled={!modelSupportsReasoning}
                   className={cn(
-                    "h-7 w-7 rounded-lg flex items-center justify-center transition-all duration-200",
-                    incognitoMode 
-                      ? "bg-primary-500/20 text-primary-400" 
-                      : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                    "h-7 px-2 rounded-lg flex items-center gap-1 transition-all duration-200 text-xs font-medium",
+                    !modelSupportsReasoning
+                      ? "text-muted-foreground/30 cursor-not-allowed"
+                      : enableReasoning
+                        ? "bg-violet-500/20 text-violet-400"
+                        : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                   )}
-                  title={incognitoMode ? "Desactivar incógnito" : "Activar incógnito"}
+                  title={modelSupportsReasoning ? "Activar modo razonamiento extendido" : "Este modelo no soporta razonamiento extendido"}
                 >
-                  <Ghost className="h-3.5 w-3.5" />
+                  <Brain className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Razonar</span>
                 </button>
 
-                {/* Stats Tooltip */}
+                {/* Botón Buscar en Web - Siempre visible, inhabilitado si no soporta */}
+                <button
+                  type="button"
+                  onClick={() => modelSupportsWebSearch && setEnableWebSearch(!enableWebSearch)}
+                  disabled={!modelSupportsWebSearch}
+                  className={cn(
+                    "h-7 px-2 rounded-lg flex items-center gap-1 transition-all duration-200 text-xs font-medium",
+                    !modelSupportsWebSearch
+                      ? "text-muted-foreground/30 cursor-not-allowed"
+                      : enableWebSearch
+                        ? "bg-cyan-500/20 text-cyan-400"
+                        : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                  )}
+                  title={modelSupportsWebSearch ? "Buscar información en internet" : "Este modelo no soporta búsqueda web"}
+                >
+                  <Globe className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Web</span>
+                </button>
+              </div>
+
+              {/* LADO DERECHO: Stats, Incógnito (más a la derecha) */}
+              <div className="flex items-center gap-0.5">
+                {/* Stats */}
                 <Popover>
                   <PopoverTrigger asChild>
                     <button
@@ -1046,7 +1158,6 @@ export function ChatInterface({
                     </div>
                     
                     <div className="p-3 space-y-2">
-                      {/* Puntos Restantes */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
                           <Coins className="h-3.5 w-3.5 text-primary-400" />
@@ -1055,7 +1166,6 @@ export function ChatInterface({
                         <span className="text-xs font-semibold text-primary-300">{formatPoints(pointsBalance)}</span>
                       </div>
                       
-                      {/* Contexto */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
                           <Brain className="h-3.5 w-3.5 text-cyan-400" />
@@ -1064,7 +1174,6 @@ export function ChatInterface({
                         <span className="text-xs font-semibold text-cyan-300">{formatContext(telemetry.contextUsed, telemetry.contextLimit)}</span>
                       </div>
                       
-                      {/* Última Petición */}
                       <div className="flex items-center justify-between pt-2 border-t border-primary-500/10">
                         <span className="text-xs text-muted-foreground">Última petición</span>
                         <div className="text-right">
@@ -1076,54 +1185,33 @@ export function ChatInterface({
                   </PopoverContent>
                 </Popover>
 
-                {/* Botón de Voz */}
+                {/* Incógnito - Más a la derecha */}
                 <button
                   type="button"
-                  onClick={toggleRecording}
+                  onClick={() => onIncognitoChange?.(!incognitoMode)}
                   className={cn(
                     "h-7 w-7 rounded-lg flex items-center justify-center transition-all duration-200",
-                    isRecording 
-                      ? "bg-red-500/20 text-red-400 animate-pulse" 
+                    incognitoMode
+                      ? "bg-primary-500/20 text-primary-400"
                       : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                   )}
-                  title={isRecording ? "Detener grabación" : "Entrada por voz"}
+                  title={incognitoMode ? "Desactivar incógnito" : "Activar incógnito"}
                 >
-                  {isRecording ? (
-                    <Square className="h-3.5 w-3.5" />
-                  ) : (
-                    <Mic className="h-3.5 w-3.5" />
-                  )}
-                </button>
-                
-                {/* Botón de Enviar */}
-                <button
-                  type="submit"
-                  disabled={!hasContent || isLoading}
-                  className={cn(
-                    "h-7 w-7 rounded-lg flex items-center justify-center transition-all duration-200",
-                    hasContent && !isLoading
-                      ? "bg-primary-600 text-white hover:bg-primary-500 shadow-glow-sm"
-                      : "bg-secondary/50 text-muted-foreground cursor-not-allowed"
-                  )}
-                >
-                  {isLoading ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <ArrowUp className="h-3.5 w-3.5" />
-                  )}
+                  <Ghost className="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>
           </div>
         </form>
         
-        {/* Helper text */}
-        <p className="text-[11px] text-muted-foreground/60 mt-2 text-center">
-          <kbd className="px-1.5 py-0.5 rounded bg-secondary text-[10px] font-mono">Enter</kbd>
-          {' '}para enviar ·{' '}
-          <kbd className="px-1.5 py-0.5 rounded bg-secondary text-[10px] font-mono">Shift+Enter</kbd>
-          {' '}para nueva línea
-        </p>
+          {/* Helper text */}
+          <p className="text-[11px] text-muted-foreground/60 mt-2 text-center">
+            <kbd className="px-1.5 py-0.5 rounded bg-secondary text-[10px] font-mono">Enter</kbd>
+            {' '}para enviar ·{' '}
+            <kbd className="px-1.5 py-0.5 rounded bg-secondary text-[10px] font-mono">Shift+Enter</kbd>
+            {' '}para nueva línea
+          </p>
+        </div>
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════
@@ -1178,17 +1266,21 @@ export function ChatInterface({
                 Quizás después
               </Button>
               <Button
-                asChild
+                onClick={() => {
+                  setShowUpgradeModal(false)
+                  setShowPricingModal(true)
+                }}
                 className="flex-1 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400"
               >
-                <Link href="/pricing">
-                  Ver planes
-                </Link>
+                Ver planes
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Pricing Modal */}
+      <PricingModal open={showPricingModal} onOpenChange={setShowPricingModal} />
     </div>
   )
 }

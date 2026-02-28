@@ -16,88 +16,75 @@ import {
   Zap,
   Crown,
   Sparkles,
-  Bot,
-  Brain,
-  Image,
-  MessageSquare,
   Shield,
-  Headphones,
   ArrowRight,
 } from 'lucide-react'
 
-// Plan features
+// Plan features - Simplificado para caber sin scroll
 const plans = [
   {
     id: 'free',
-    name: 'Plan Gratuito',
+    name: 'Gratuito',
     price: 0,
-    description: 'Perfecto para empezar a explorar',
+    description: 'Para empezar',
     icon: Zap,
     color: 'text-green-400',
     bgColor: 'bg-green-500/10',
     borderColor: 'border-green-500/30',
     features: [
-      { text: 'Acceso a modelos Groq gratuitos (Llama, Qwen, Kimi)', included: true },
-      { text: '10,000 puntos de bienvenida', included: true },
-      { text: 'Historial de conversaciones', included: true },
-      { text: 'Arena Texto y Código', included: true },
-      { text: 'Modelos Premium (Claude 4.6, ChatGPT 5.2)', included: false },
-      { text: 'Contexto ampliado (256K)', included: false },
-      { text: 'Soporte prioritario', included: false },
+      'Modelos Groq gratuitos',
+      '10,000 puntos de bienvenida',
+      'Historial de conversaciones',
+      'Arena Texto y Código',
+    ],
+    excludedFeatures: [
+      'Modelos Premium',
+      'Contexto 256K',
     ],
     cta: 'Plan actual',
     current: true,
   },
   {
     id: 'premium',
-    name: 'Aether Premium',
+    name: 'Premium',
     price: 19.99,
-    description: 'Para usuarios que buscan lo mejor',
+    description: 'Lo mejor para ti',
     icon: Crown,
     color: 'text-primary-400',
     bgColor: 'bg-primary-500/10',
     borderColor: 'border-primary-500/50',
     popular: true,
     features: [
-      { text: 'Todo lo del Plan Gratuito', included: true },
-      { text: '50,000 puntos mensuales', included: true },
-      { text: 'Acceso a Claude 4.6 Opus y Sonnet', included: true },
-      { text: 'Acceso a ChatGPT 5.2 y GPT-4o', included: true },
-      { text: 'Acceso a Gemini 3.1 Pro', included: true },
-      { text: 'Contexto ampliado hasta 256K tokens', included: true },
-      { text: 'Soporte prioritario 24/7', included: true },
+      'Todo lo del Plan Gratuito',
+      '50,000 puntos mensuales',
+      'Claude 4.6, ChatGPT 5.2, Gemini 3.1',
+      'Contexto ampliado 256K',
+      'Soporte prioritario 24/7',
     ],
-    cta: 'Actualizar ahora',
+    excludedFeatures: [],
+    cta: 'Actualizar',
     current: false,
   },
   {
     id: 'pro',
-    name: 'Aether Pro',
+    name: 'Pro',
     price: 49.99,
-    description: 'Para equipos y uso intensivo',
+    description: 'Para equipos',
     icon: Sparkles,
     color: 'text-amber-400',
     bgColor: 'bg-amber-500/10',
     borderColor: 'border-amber-500/30',
     features: [
-      { text: 'Todo lo de Premium', included: true },
-      { text: '150,000 puntos mensuales', included: true },
-      { text: 'Acceso anticipado a nuevos modelos', included: true },
-      { text: 'API Access incluido', included: true },
-      { text: 'Uso ilimitado de Arena Imágenes', included: true },
-      { text: 'Historial ilimitado', included: true },
-      { text: 'Cuenta dedicada + SLA', included: true },
+      'Todo lo de Premium',
+      '150,000 puntos mensuales',
+      'Acceso anticipado a modelos',
+      'API Access incluido',
+      'Arena Imágenes ilimitado',
     ],
-    cta: 'Contactar ventas',
+    excludedFeatures: [],
+    cta: 'Contactar',
     current: false,
   },
-]
-
-// Premium models showcase
-const premiumModels = [
-  { name: 'Claude 4.6 Opus', provider: 'Anthropic', icon: Bot },
-  { name: 'ChatGPT 5.2', provider: 'OpenAI', icon: Brain },
-  { name: 'Gemini 3.1 Pro', provider: 'Google', icon: Sparkles },
 ]
 
 interface PricingModalProps {
@@ -113,48 +100,50 @@ export function PricingModal({ open, onOpenChange }: PricingModalProps) {
     if (planId === 'free') return
     
     setIsLoading(true)
-    // Simular redirección a checkout
     await new Promise(resolve => setTimeout(resolve, 1000))
     setIsLoading(false)
-    // TODO: Implementar Stripe checkout
     console.log('Upgrading to:', planId)
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl h-[90vh] p-0 bg-background border-primary-500/20 overflow-hidden">
+      <DialogContent 
+        showCloseButton={false} 
+        className="w-[95vw] max-w-4xl h-auto max-h-[95vh] p-0 bg-background border-primary-500/20 overflow-hidden"
+      >
         <VisuallyHidden>
           <DialogTitle>Planes y Precios de Aether</DialogTitle>
-          <DialogDescription>Elige entre los planes Gratuito, Premium y Pro para acceder a diferentes modelos de IA y características.</DialogDescription>
+          <DialogDescription>Elige entre los planes Gratuito, Premium y Pro.</DialogDescription>
         </VisuallyHidden>
-        {/* Header */}
-        <div className="relative bg-gradient-to-b from-primary-500/10 to-transparent p-6 border-b border-primary-500/10">
+        
+        {/* Header Compacto */}
+        <div className="relative bg-gradient-to-b from-primary-500/10 to-transparent px-4 py-4 md:px-6 md:py-5 border-b border-primary-500/10">
           <button
             onClick={() => onOpenChange(false)}
-            className="absolute top-4 right-4 h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            className="absolute top-3 right-3 md:top-4 md:right-4 h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
           
-          <div className="text-center max-w-xl mx-auto">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-500/10 border border-primary-500/20 text-primary-300 text-sm font-medium mb-4">
-              <Crown className="h-4 w-4" />
+          <div className="text-center pr-8">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-500/10 border border-primary-500/20 text-primary-300 text-xs md:text-sm font-medium mb-2 md:mb-3">
+              <Crown className="h-3.5 w-3.5 md:h-4 md:w-4" />
               Desbloquea todo el potencial
             </div>
-            <h2 className="text-2xl font-bold mb-2">
-              Elige el plan perfecto para ti
+            <h2 className="text-xl md:text-2xl font-bold mb-1">
+              Elige tu plan
             </h2>
-            <p className="text-muted-foreground">
-              Accede a los modelos más potentes y características avanzadas
+            <p className="text-sm text-muted-foreground hidden sm:block">
+              Accede a los modelos más potentes
             </p>
           </div>
 
           {/* Billing toggle */}
-          <div className="flex items-center justify-center gap-2 mt-6">
+          <div className="flex items-center justify-center gap-1.5 md:gap-2 mt-3 md:mt-4">
             <button
               onClick={() => setBillingPeriod('monthly')}
               className={cn(
-                "px-4 py-2 rounded-lg text-sm font-medium transition-all",
+                "px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-medium transition-all",
                 billingPeriod === 'monthly'
                   ? "bg-primary-500/20 text-primary-300"
                   : "text-muted-foreground hover:text-foreground"
@@ -165,23 +154,23 @@ export function PricingModal({ open, onOpenChange }: PricingModalProps) {
             <button
               onClick={() => setBillingPeriod('yearly')}
               className={cn(
-                "px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2",
+                "px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-medium transition-all flex items-center gap-1.5 md:gap-2",
                 billingPeriod === 'yearly'
                   ? "bg-primary-500/20 text-primary-300"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
               Anual
-              <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">
+              <span className="text-[10px] md:text-xs px-1 md:px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">
                 -20%
               </span>
             </button>
           </div>
         </div>
 
-        {/* Plans grid */}
-        <div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 200px)' }}>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Plans grid - Compacto sin scroll innecesario */}
+        <div className="p-4 md:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
             {plans.map((plan) => {
               const Icon = plan.icon
               const price = billingPeriod === 'yearly' 
@@ -192,7 +181,7 @@ export function PricingModal({ open, onOpenChange }: PricingModalProps) {
                 <div
                   key={plan.id}
                   className={cn(
-                    "relative rounded-2xl border p-5 transition-all duration-200",
+                    "relative rounded-xl md:rounded-2xl border p-4 md:p-5 transition-all duration-200",
                     plan.borderColor,
                     plan.popular && "ring-2 ring-primary-500/50",
                     plan.current && "opacity-75"
@@ -200,55 +189,55 @@ export function PricingModal({ open, onOpenChange }: PricingModalProps) {
                 >
                   {/* Popular badge */}
                   {plan.popular && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <span className="px-3 py-1 rounded-full bg-primary-500 text-white text-xs font-medium">
+                    <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
+                      <span className="px-2.5 py-1 rounded-full bg-primary-500 text-white text-[10px] md:text-xs font-medium whitespace-nowrap">
                         Más popular
                       </span>
                     </div>
                   )}
 
                   {/* Header */}
-                  <div className="flex items-start gap-3 mb-4">
-                    <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl", plan.bgColor)}>
-                      <Icon className={cn("h-5 w-5", plan.color)} />
+                  <div className="flex items-center gap-2.5 md:gap-3 mb-3 md:mb-4">
+                    <div className={cn("flex h-9 w-9 md:h-10 md:w-10 items-center justify-center rounded-lg md:rounded-xl", plan.bgColor)}>
+                      <Icon className={cn("h-4 w-4 md:h-5 md:w-5", plan.color)} />
                     </div>
                     <div>
-                      <h3 className="font-semibold">{plan.name}</h3>
-                      <p className="text-xs text-muted-foreground">{plan.description}</p>
+                      <h3 className="font-semibold text-sm md:text-base">{plan.name}</h3>
+                      <p className="text-[10px] md:text-xs text-muted-foreground">{plan.description}</p>
                     </div>
                   </div>
 
                   {/* Price */}
-                  <div className="mb-4">
+                  <div className="mb-3 md:mb-4">
                     <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-bold">
+                      <span className="text-2xl md:text-3xl font-bold">
                         {price === 0 ? 'Gratis' : `${price}€`}
                       </span>
                       {price > 0 && (
-                        <span className="text-sm text-muted-foreground">
-                          /{billingPeriod === 'yearly' ? 'mes' : 'mes'}
+                        <span className="text-xs md:text-sm text-muted-foreground">
+                          /mes
                         </span>
                       )}
                     </div>
                     {billingPeriod === 'yearly' && price > 0 && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Facturado anualmente ({price * 12}€/año)
+                      <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5">
+                        {price * 12}€/año
                       </p>
                     )}
                   </div>
 
                   {/* Features */}
-                  <ul className="space-y-2 mb-6">
+                  <ul className="space-y-1.5 md:space-y-2 mb-4 md:mb-5">
                     {plan.features.map((feature, index) => (
-                      <li key={index} className="flex items-start gap-2 text-sm">
-                        {feature.included ? (
-                          <Check className="h-4 w-4 text-green-400 shrink-0 mt-0.5" />
-                        ) : (
-                          <X className="h-4 w-4 text-muted-foreground/50 shrink-0 mt-0.5" />
-                        )}
-                        <span className={feature.included ? 'text-foreground' : 'text-muted-foreground'}>
-                          {feature.text}
-                        </span>
+                      <li key={index} className="flex items-start gap-2 text-xs md:text-sm">
+                        <Check className="h-3.5 w-3.5 md:h-4 md:w-4 text-green-400 shrink-0 mt-0.5" />
+                        <span className="text-foreground">{feature}</span>
+                      </li>
+                    ))}
+                    {plan.excludedFeatures.map((feature, index) => (
+                      <li key={`ex-${index}`} className="flex items-start gap-2 text-xs md:text-sm">
+                        <X className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground/50 shrink-0 mt-0.5" />
+                        <span className="text-muted-foreground">{feature}</span>
                       </li>
                     ))}
                   </ul>
@@ -258,7 +247,7 @@ export function PricingModal({ open, onOpenChange }: PricingModalProps) {
                     onClick={() => handleUpgrade(plan.id)}
                     disabled={plan.current || isLoading}
                     className={cn(
-                      "w-full",
+                      "w-full text-xs md:text-sm h-9 md:h-10",
                       plan.popular 
                         ? "bg-primary-600 hover:bg-primary-500" 
                         : plan.current 
@@ -268,13 +257,13 @@ export function PricingModal({ open, onOpenChange }: PricingModalProps) {
                   >
                     {plan.current ? (
                       <>
-                        <Check className="h-4 w-4 mr-2" />
+                        <Check className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />
                         Plan actual
                       </>
                     ) : (
                       <>
                         {plan.cta}
-                        <ArrowRight className="h-4 w-4 ml-2" />
+                        <ArrowRight className="h-3.5 w-3.5 md:h-4 md:w-4 ml-1.5 md:ml-2" />
                       </>
                     )}
                   </Button>
@@ -283,35 +272,11 @@ export function PricingModal({ open, onOpenChange }: PricingModalProps) {
             })}
           </div>
 
-          {/* Premium models showcase */}
-          <div className="mt-8 p-5 rounded-2xl bg-gradient-to-r from-primary-500/10 via-primary-500/5 to-primary-500/10 border border-primary-500/20">
-            <h4 className="font-semibold mb-4 text-center">
-              Modelos incluidos en Premium
-            </h4>
-            <div className="flex flex-wrap justify-center gap-4">
-              {premiumModels.map((model) => {
-                const ModelIcon = model.icon
-                return (
-                  <div
-                    key={model.name}
-                    className="flex items-center gap-3 px-4 py-2 rounded-xl bg-secondary/50 border border-primary-500/10"
-                  >
-                    <ModelIcon className="h-5 w-5 text-primary-400" />
-                    <div>
-                      <div className="text-sm font-medium">{model.name}</div>
-                      <div className="text-xs text-muted-foreground">{model.provider}</div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Guarantee */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
-              <Shield className="h-4 w-4 text-green-400" />
-              Garantía de devolución de 30 días. Sin preguntas.
+          {/* Guarantee - Compacto */}
+          <div className="mt-4 md:mt-6 text-center">
+            <p className="text-xs md:text-sm text-muted-foreground flex items-center justify-center gap-1.5 md:gap-2">
+              <Shield className="h-3.5 w-3.5 md:h-4 md:w-4 text-green-400" />
+              Garantía de devolución de 30 días
             </p>
           </div>
         </div>

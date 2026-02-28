@@ -24,6 +24,7 @@ import {
   Send,
   ArrowLeft,
   Zap,
+  X,
 } from 'lucide-react'
 
 // FAQ categories
@@ -100,31 +101,31 @@ export function SupportCenter({ open, onOpenChange }: SupportCenterProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl h-[85vh] p-0 bg-background border-primary-500/20 overflow-hidden">
+      <DialogContent showCloseButton={false} className="w-[95vw] max-w-3xl h-auto max-h-[95vh] p-0 bg-background border-primary-500/20 overflow-hidden">
         <VisuallyHidden>
           <DialogTitle>Centro de Soporte de Aether</DialogTitle>
           <DialogDescription>Encuentra respuestas a preguntas frecuentes, tutoriales y contacta con soporte técnico.</DialogDescription>
         </VisuallyHidden>
         {/* Header */}
-        <div className="p-6 border-b border-primary-500/10">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
+        <div className="p-4 md:p-6 border-b border-primary-500/10">
+          <div className="flex items-center justify-between mb-3 md:mb-4">
+            <div className="flex items-center gap-2 md:gap-3">
               {showContactForm && (
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setShowContactForm(false)}
-                  className="h-8 w-8 mr-2"
+                  className="h-7 w-7 md:h-8 md:w-8 mr-1 md:mr-2"
                 >
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
               )}
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-500/10">
-                <HelpCircle className="h-5 w-5 text-primary-400" />
+              <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-lg md:rounded-xl bg-primary-500/10">
+                <HelpCircle className="h-4 w-4 md:h-5 md:w-5 text-primary-400" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold">Centro de Soporte</h2>
-                <p className="text-xs text-muted-foreground">
+                <h2 className="text-base md:text-lg font-semibold">Centro de Soporte</h2>
+                <p className="text-[10px] md:text-xs text-muted-foreground">
                   ¿Cómo podemos ayudarte?
                 </p>
               </div>
@@ -133,9 +134,9 @@ export function SupportCenter({ open, onOpenChange }: SupportCenterProps) {
               variant="ghost"
               size="icon"
               onClick={() => onOpenChange(false)}
-              className="h-8 w-8"
+              className="h-7 w-7 md:h-8 md:w-8"
             >
-              <ExternalLink className="h-4 w-4" />
+              <X className="h-4 w-4" />
             </Button>
           </div>
 
@@ -147,14 +148,14 @@ export function SupportCenter({ open, onOpenChange }: SupportCenterProps) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Buscar artículos, tutoriales, FAQs..."
-                className="pl-10 bg-secondary/50 border-primary-500/20"
+                className="pl-10 bg-secondary/50 border-primary-500/20 text-sm"
               />
             </div>
           )}
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6" style={{ maxHeight: 'calc(85vh - 140px)' }}>
+        <div className="flex-1 overflow-y-auto p-4 md:p-6" style={{ maxHeight: 'calc(95vh - 140px)' }}>
           {showContactForm ? (
             /* CONTACT FORM */
             <div className="max-w-lg mx-auto space-y-4">

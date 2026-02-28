@@ -21,6 +21,7 @@ import {
   Star,
   Users,
   ArrowRight,
+  ArrowLeft,
   X,
   Sparkles,
   MonitorSmartphone,
@@ -124,35 +125,35 @@ export function AppsMarketplace({ open, onOpenChange }: AppsMarketplaceProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[85vh] p-0 bg-background border-primary-500/20 overflow-hidden">
+      <DialogContent showCloseButton={false} className="w-[95vw] max-w-4xl h-auto max-h-[95vh] p-0 bg-background border-primary-500/20 overflow-hidden">
         <VisuallyHidden>
           <DialogTitle>Marketplace de Apps de Aether</DialogTitle>
           <DialogDescription>Descarga aplicaciones de escritorio, extensiones de navegador y plugins para integrar Aether en tu flujo de trabajo.</DialogDescription>
         </VisuallyHidden>
         {/* Header */}
-        <div className="p-6 border-b border-primary-500/10">
+        <div className="p-4 md:p-6 border-b border-primary-500/10">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 md:gap-3">
               {selectedApp && (
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setSelectedApp(null)}
-                  className="h-8 w-8 mr-2"
+                  className="h-7 w-7 md:h-8 md:w-8 mr-1 md:mr-2"
                 >
-                  <X className="h-4 w-4" />
+                  <ArrowLeft className="h-4 w-4" />
                 </Button>
               )}
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-500/10">
-                <Sparkles className="h-5 w-5 text-primary-400" />
+              <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-lg md:rounded-xl bg-primary-500/10">
+                <Sparkles className="h-4 w-4 md:h-5 md:w-5 text-primary-400" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold">
+                <h2 className="text-base md:text-lg font-semibold">
                   {selectedAppData ? selectedAppData.name : 'Aplicaciones y Extensiones'}
                 </h2>
-                <p className="text-xs text-muted-foreground">
-                  {selectedAppData 
-                    ? selectedAppData.description 
+                <p className="text-[10px] md:text-xs text-muted-foreground">
+                  {selectedAppData
+                    ? selectedAppData.description
                     : 'Lleva Aether a todas partes'
                   }
                 </p>
@@ -162,7 +163,7 @@ export function AppsMarketplace({ open, onOpenChange }: AppsMarketplaceProps) {
               variant="ghost"
               size="icon"
               onClick={() => onOpenChange(false)}
-              className="h-8 w-8"
+              className="h-7 w-7 md:h-8 md:w-8"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -170,7 +171,7 @@ export function AppsMarketplace({ open, onOpenChange }: AppsMarketplaceProps) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6" style={{ maxHeight: 'calc(85vh - 100px)' }}>
+        <div className="flex-1 overflow-y-auto p-4 md:p-6" style={{ maxHeight: 'calc(95vh - 100px)' }}>
           {selectedAppData ? (
             /* APP DETAIL VIEW */
             <div className="space-y-6">

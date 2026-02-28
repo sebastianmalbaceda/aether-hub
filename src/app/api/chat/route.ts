@@ -29,6 +29,18 @@ const WELCOME_BONUS_POINTS = 10000
 // y fallará solo cuando se intente usar ese proveedor
 
 // 1. Cliente Groq (Free Tier Activo)
+// ============================================
+// ⚠️ IMPORTANTE: COMPATIBILIDAD GROQ CON VERCEL AI SDK v6
+// ============================================
+// El Vercel AI SDK (@ai-sdk/openai@3.x) por defecto usa el endpoint
+// /responses de OpenAI, que NO es compatible con Groq.
+//
+// Para Groq, SIEMPRE usar groq.chat(modelId) en lugar de groq(modelId):
+//   ✅ groq.chat('llama-3.1-8b-instant') → /chat/completions (compatible)
+//   ❌ groq('llama-3.1-8b-instant')      → /responses (NO compatible con Groq)
+//
+// Ver línea 83 en getModelInstance() para la implementación correcta.
+// ============================================
 const groq = createOpenAI({
   baseURL: 'https://api.groq.com/openai/v1',
   apiKey: process.env.GROQ_API_KEY,
@@ -91,6 +103,42 @@ function getModelInstance(modelId: string, provider: string) {
 // Endpoint POST - Chat Streaming
 // ============================================
 
+// ============================================
+// Rate Limiting (In-Memory for single instance)
+// For production with multiple instances, use Redis-based rate limiting
+// ============================================
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
+const RATE_LIMIT_WINDOW = 60 * 1000 // 1 minute
+const RATE_LIMIT_MAX = 20 // 20 requests per minute per user
+
+function checkRateLimit(userId: string): { allowed: boolean; remaining: number; resetIn: number } {
+  const now = Date.now()
+  const userLimit = rateLimitMap.get(userId)
+  
+  if (!userLimit || now > userLimit.resetTime) {
+    // Reset or create new window
+    rateLimitMap.set(userId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW })
+    return { allowed: true, remaining: RATE_LIMIT_MAX - 1, resetIn: RATE_LIMIT_WINDOW }
+  }
+  
+  if (userLimit.count >= RATE_LIMIT_MAX) {
+    return { allowed: false, remaining: 0, resetIn: userLimit.resetTime - now }
+  }
+  
+  userLimit.count++
+  return { allowed: true, remaining: RATE_LIMIT_MAX - userLimit.count, resetIn: userLimit.resetTime - now }
+}
+
+// Cleanup old entries every 5 minutes
+setInterval(() => {
+  const now = Date.now()
+  for (const [key, value] of rateLimitMap.entries()) {
+    if (now > value.resetTime) {
+      rateLimitMap.delete(key)
+    }
+  }
+}, 5 * 60 * 1000)
+
 export async function POST(request: NextRequest) {
   try {
     // Verificar autenticación
@@ -104,6 +152,29 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = authUser.id
+    
+    // Check rate limit
+    const rateLimit = checkRateLimit(userId)
+    if (!rateLimit.allowed) {
+      return new Response(
+        JSON.stringify({
+          error: 'Too many requests. Please wait before sending another message.',
+          code: 'RATE_LIMIT_EXCEEDED',
+          retryAfter: Math.ceil(rateLimit.resetIn / 1000)
+        }),
+        {
+          status: 429,
+          headers: {
+            'Content-Type': 'application/json',
+            'Retry-After': String(Math.ceil(rateLimit.resetIn / 1000)),
+            'X-RateLimit-Limit': String(RATE_LIMIT_MAX),
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': String(Math.ceil(rateLimit.resetIn / 1000))
+          }
+        }
+      )
+    }
+    
     const body = await request.json()
     
     const { 
@@ -259,13 +330,6 @@ export async function POST(request: NextRequest) {
     // Groq y otros modelos estrictos solo aceptan { role, content }
     // El frontend puede enviar objetos complejos o arrays que causan error 400
     
-    // LOG: Ver mensajes originales recibidos
-    console.log('[API /chat] === MENSAJES ORIGINALES ===')
-    console.log('[API /chat] Total mensajes recibidos:', messages.length)
-    messages.forEach((msg: { role: string; content: unknown }, idx: number) => {
-      console.log(`[API /chat] Msg ${idx}: role="${msg.role}", content type=${typeof msg.content}, preview="${String(msg.content).substring(0, 50)}..."`)
-    })
-    
     const cleanMessages = messages.map((msg: { role: string; content: unknown }) => {
       // Extraer texto puro del contenido
       let pureText = ''
@@ -309,19 +373,11 @@ export async function POST(request: NextRequest) {
       
       if (lastMsg && lastMsg.role === msg.role) {
         // Fusionar contenido de mensajes consecutivos del mismo rol
-        console.log(`[API /chat] Fusionando mensajes consecutivos con rol "${msg.role}"`)
         lastMsg.content += '\n\n' + msg.content
       } else {
         mergedMessages.push({ ...msg })
       }
     }
-    
-    // LOG: Ver mensajes finales después de fusión
-    console.log('[API /chat] === MENSAJES FINALES (después de fusión) ===')
-    console.log('[API /chat] Total mensajes finales:', mergedMessages.length)
-    mergedMessages.forEach((msg, idx) => {
-      console.log(`[API /chat] Final ${idx}: role="${msg.role}", content length=${msg.content.length}`)
-    })
 
     // Obtener instancia del modelo
     const model = getModelInstance(modelId, modelConfig.provider)
@@ -364,39 +420,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Log para depuración
-    console.log('[API /chat] === INICIANDO PETICIÓN A GROQ ===')
-    console.log('[API /chat] Timestamp:', new Date().toISOString())
-    console.log('[API /chat] Modelo:', modelId)
-    console.log('[API /chat] Provider:', modelConfig.provider)
-    console.log('[API /chat] Mensajes a enviar:', mergedMessages.length)
-    console.log('[API /chat] Opciones body:', JSON.stringify(streamOptions.body || {}))
-    console.log('[API /chat] Temperature:', temperature)
-    console.log('[API /chat] Max retries:', streamOptions.maxRetries)
-    
-    // Verificar si hay mensajes problemáticos
-    const problematicMsgs = mergedMessages.filter(m => !m.content || m.content.trim().length === 0)
-    if (problematicMsgs.length > 0) {
-      console.error('[API /chat] ⚠️ ALERTA: Hay mensajes vacíos que no fueron filtrados!')
-    }
-    
-    // 🔍 LOG ADICIONAL: Verificar rate limits potenciales
-    console.log('[API /chat] 🔍 DEBUG: Verificando posibles problemas...')
-    console.log('[API /chat] 🔍 Total tokens estimados en contexto:', mergedMessages.reduce((acc, m) => acc + Math.ceil(m.content.length / 4), 0))
-    console.log('[API /chat] 🔍 Número de mensajes en historial:', mergedMessages.length)
-    console.log('[API /chat] 🔍 Primer mensaje role:', mergedMessages[0]?.role)
-    console.log('[API /chat] 🔍 Último mensaje role:', mergedMessages[mergedMessages.length - 1]?.role)
-
-    // Ejecutar stream con manejo de errores explícito
-    let result
-    try {
-      result = streamText(streamOptions as Parameters<typeof streamText>[0])
-      // Verificar si el result tiene errores inmediatos
-      console.log('[API /chat] streamText() llamado, verificando resultado...')
-    } catch (streamInitError) {
-      console.error('[API /chat] ⚠️ ERROR al inicializar streamText:', streamInitError)
-      throw streamInitError
-    }
+    // Ejecutar stream
+    const result = streamText(streamOptions as Parameters<typeof streamText>[0])
 
     // Variables para tracking de uso
     let totalPromptTokens = 0
@@ -408,36 +433,17 @@ export async function POST(request: NextRequest) {
       async start(controller) {
         try {
           let fullContent = ''
-          let chunkCount = 0
-          
-          console.log('[API /chat] === INICIANDO STREAM ===')
-          
-          // Nota: En AI SDK v4/v6, los errores se capturan en el catch del for-await
-          // No existe result.error como propiedad en StreamTextResult
           
           // Procesar el stream
           for await (const chunk of result.textStream) {
-            chunkCount++
             fullContent += chunk
             // Enviar chunk al cliente
             controller.enqueue(encoder.encode(`0:"${chunk.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"\n`))
           }
           
-          console.log('[API /chat] === STREAM COMPLETADO ===')
-          console.log('[API /chat] Chunks recibidos:', chunkCount)
-          console.log('[API /chat] Contenido total:', fullContent.length, 'caracteres')
-          
-          // LOG: Detectar stream vacío
+          // Detectar stream vacío (posible error de API)
           if (fullContent.length === 0) {
-            console.error('[API /chat] ⚠️ ERROR: Stream vacío - ningún contenido recibido de Groq')
-            console.error('[API /chat] Modelo:', modelId, '- Posible rate limiting')
-            console.error('[API /chat] 🔍 DEBUG: Chunk count:', chunkCount)
-            console.error('[API /chat] 🔍 DEBUG: Mensajes enviados:', mergedMessages.length)
-            console.error('[API /chat] 🔍 DEBUG: Último mensaje role:', mergedMessages[mergedMessages.length - 1]?.role)
-            
-            // 🔍 Intentar obtener más información del error
-            // Nota: En AI SDK v4/v6, el error se captura en el catch del stream, no en result.error
-            console.error('[API /chat] 🔍 Stream vacío - posible rate limit o error de Groq API')
+            console.error('[API /chat] Stream vacío - posible error de Groq API')
             
             // Mensaje específico según el modelo
             let errorMessage = '⏳ El servidor está ocupado. Por favor, espera unos segundos e intenta de nuevo.'

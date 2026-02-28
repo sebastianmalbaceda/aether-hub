@@ -65,11 +65,11 @@ const recentSessions = [
 
 export default function DashboardPage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 p-4 md:p-6 lg:p-8">
       {/* Welcome Section */}
       <div>
-        <h1 className="text-3xl font-bold">Bienvenido a Aether Hub</h1>
-        <p className="text-muted-foreground mt-1">
+        <h1 className="text-2xl md:text-3xl font-bold">Bienvenido a Aether Hub</h1>
+        <p className="text-sm md:text-base text-muted-foreground mt-1">
           Tu portal unificado para acceder a múltiples modelos de IA
         </p>
       </div>

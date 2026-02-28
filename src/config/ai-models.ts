@@ -16,6 +16,8 @@ export interface AIModelConfig {
   supportsVision: boolean
   supportsFunctionCalling: boolean
   supportsJsonMode: boolean
+  supportsReasoning: boolean      // Extended thinking / reasoning models
+  supportsWebSearch: boolean      // Web search capability
   // Pricing in points per 1K tokens
   pricing: {
     inputPer1K: number    // Points per 1K input tokens
@@ -48,6 +50,8 @@ export const AI_MODELS: AIModelConfig[] = [
     supportsVision: false,
     supportsFunctionCalling: true,
     supportsJsonMode: true,
+    supportsReasoning: false,
+    supportsWebSearch: false,
     pricing: {
       inputPer1K: 0,
       outputPer1K: 0,
@@ -68,6 +72,8 @@ export const AI_MODELS: AIModelConfig[] = [
     supportsVision: false,
     supportsFunctionCalling: true,
     supportsJsonMode: true,
+    supportsReasoning: true,
+    supportsWebSearch: false,
     pricing: {
       inputPer1K: 0,
       outputPer1K: 0,
@@ -88,6 +94,8 @@ export const AI_MODELS: AIModelConfig[] = [
     supportsVision: false,
     supportsFunctionCalling: true,
     supportsJsonMode: true,
+    supportsReasoning: true,
+    supportsWebSearch: false,
     pricing: {
       inputPer1K: 0,
       outputPer1K: 0,
@@ -108,6 +116,8 @@ export const AI_MODELS: AIModelConfig[] = [
     supportsVision: false,
     supportsFunctionCalling: true,
     supportsJsonMode: true,
+    supportsReasoning: true,
+    supportsWebSearch: false,
     pricing: {
       inputPer1K: 0,
       outputPer1K: 0,
@@ -129,6 +139,8 @@ export const AI_MODELS: AIModelConfig[] = [
     supportsVision: false,
     supportsFunctionCalling: true,
     supportsJsonMode: true,
+    supportsReasoning: true,
+    supportsWebSearch: false,
     pricing: {
       inputPer1K: 0,
       outputPer1K: 0,
@@ -149,6 +161,8 @@ export const AI_MODELS: AIModelConfig[] = [
     supportsVision: false,
     supportsFunctionCalling: true,
     supportsJsonMode: true,
+    supportsReasoning: true,
+    supportsWebSearch: false,
     pricing: {
       inputPer1K: 0,
       outputPer1K: 0,
@@ -174,6 +188,8 @@ export const AI_MODELS: AIModelConfig[] = [
     supportsVision: true,
     supportsFunctionCalling: true,
     supportsJsonMode: true,
+    supportsReasoning: true,
+    supportsWebSearch: true,
     pricing: {
       inputPer1K: 7,
       outputPer1K: 21,
@@ -192,6 +208,8 @@ export const AI_MODELS: AIModelConfig[] = [
     supportsVision: true,
     supportsFunctionCalling: true,
     supportsJsonMode: true,
+    supportsReasoning: true,
+    supportsWebSearch: true,
     pricing: {
       inputPer1K: 0,
       outputPer1K: 0,
@@ -210,6 +228,8 @@ export const AI_MODELS: AIModelConfig[] = [
     supportsVision: true,
     supportsFunctionCalling: true,
     supportsJsonMode: true,
+    supportsReasoning: false,
+    supportsWebSearch: true,
     pricing: {
       inputPer1K: 1.25,
       outputPer1K: 5,
@@ -228,6 +248,8 @@ export const AI_MODELS: AIModelConfig[] = [
     supportsVision: true,
     supportsFunctionCalling: true,
     supportsJsonMode: true,
+    supportsReasoning: false,
+    supportsWebSearch: true,
     pricing: {
       inputPer1K: 0.075,
       outputPer1K: 0.3,
@@ -252,6 +274,8 @@ export const AI_MODELS: AIModelConfig[] = [
     supportsVision: true,
     supportsFunctionCalling: true,
     supportsJsonMode: true,
+    supportsReasoning: true,
+    supportsWebSearch: false,
     pricing: {
       inputPer1K: 75,
       outputPer1K: 375,
@@ -270,6 +294,8 @@ export const AI_MODELS: AIModelConfig[] = [
     supportsVision: true,
     supportsFunctionCalling: true,
     supportsJsonMode: true,
+    supportsReasoning: true,
+    supportsWebSearch: false,
     pricing: {
       inputPer1K: 15,
       outputPer1K: 75,
@@ -288,6 +314,8 @@ export const AI_MODELS: AIModelConfig[] = [
     supportsVision: true,
     supportsFunctionCalling: true,
     supportsJsonMode: false,
+    supportsReasoning: false,
+    supportsWebSearch: false,
     pricing: {
       inputPer1K: 3,
       outputPer1K: 15,
@@ -306,6 +334,8 @@ export const AI_MODELS: AIModelConfig[] = [
     supportsVision: true,
     supportsFunctionCalling: true,
     supportsJsonMode: false,
+    supportsReasoning: false,
+    supportsWebSearch: false,
     pricing: {
       inputPer1K: 0.8,
       outputPer1K: 4,
@@ -324,6 +354,8 @@ export const AI_MODELS: AIModelConfig[] = [
     supportsVision: true,
     supportsFunctionCalling: true,
     supportsJsonMode: false,
+    supportsReasoning: false,
+    supportsWebSearch: false,
     pricing: {
       inputPer1K: 15,
       outputPer1K: 75,
@@ -348,6 +380,8 @@ export const AI_MODELS: AIModelConfig[] = [
     supportsVision: true,
     supportsFunctionCalling: true,
     supportsJsonMode: true,
+    supportsReasoning: true,
+    supportsWebSearch: true,
     pricing: {
       inputPer1K: 15,
       outputPer1K: 60,
@@ -366,6 +400,8 @@ export const AI_MODELS: AIModelConfig[] = [
     supportsVision: true,
     supportsFunctionCalling: true,
     supportsJsonMode: true,
+    supportsReasoning: true,
+    supportsWebSearch: true,
     pricing: {
       inputPer1K: 5,
       outputPer1K: 20,
@@ -384,6 +420,8 @@ export const AI_MODELS: AIModelConfig[] = [
     supportsVision: true,
     supportsFunctionCalling: true,
     supportsJsonMode: true,
+    supportsReasoning: false,
+    supportsWebSearch: true,
     pricing: {
       inputPer1K: 5,
       outputPer1K: 15,
@@ -402,6 +440,8 @@ export const AI_MODELS: AIModelConfig[] = [
     supportsVision: true,
     supportsFunctionCalling: true,
     supportsJsonMode: true,
+    supportsReasoning: false,
+    supportsWebSearch: true,
     pricing: {
       inputPer1K: 0.15,
       outputPer1K: 0.6,
@@ -420,6 +460,8 @@ export const AI_MODELS: AIModelConfig[] = [
     supportsVision: true,
     supportsFunctionCalling: true,
     supportsJsonMode: true,
+    supportsReasoning: false,
+    supportsWebSearch: false,
     pricing: {
       inputPer1K: 10,
       outputPer1K: 30,
@@ -438,6 +480,8 @@ export const AI_MODELS: AIModelConfig[] = [
     supportsVision: false,
     supportsFunctionCalling: false,
     supportsJsonMode: false,
+    supportsReasoning: true,
+    supportsWebSearch: false,
     pricing: {
       inputPer1K: 15,
       outputPer1K: 60,
@@ -456,6 +500,8 @@ export const AI_MODELS: AIModelConfig[] = [
     supportsVision: false,
     supportsFunctionCalling: false,
     supportsJsonMode: false,
+    supportsReasoning: true,
+    supportsWebSearch: false,
     pricing: {
       inputPer1K: 3,
       outputPer1K: 12,

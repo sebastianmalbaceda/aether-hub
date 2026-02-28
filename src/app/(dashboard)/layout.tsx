@@ -62,7 +62,7 @@ export default function DashboardLayout({
           />
           
           {/* Main - El contenido de las páginas (incluyendo telemetría si aplica) */}
-          <main className="flex-1 overflow-hidden">
+          <main className="flex-1 overflow-y-auto">
             {children}
           </main>
         </div>

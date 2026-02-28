@@ -20,12 +20,8 @@ import {
   CreditCard,
   LogOut,
   Search,
-  Globe,
   HelpCircle,
   ArrowUp,
-  Puzzle,
-  Gift,
-  Info,
   Sparkles,
   X,
   Pencil,
@@ -40,9 +36,6 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -60,13 +53,11 @@ import { useUserStore } from '@/stores/user-store'
 import { SettingsModal } from '@/components/settings/settings-modal'
 import { PricingModal } from '@/components/pricing/pricing-modal'
 import { SupportCenter } from '@/components/support/support-center'
-import { AppsMarketplace } from '@/components/apps/apps-marketplace'
 
 // Navegación principal
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
-  { name: 'Arena Texto', href: '/arena-texto', icon: MessageSquare },
-  { name: 'Arena Código', href: '/arena-codigo', icon: Code },
+  { name: 'Arena', href: '/arena', icon: MessageSquare },
   { name: 'Imágenes', href: '/arena/imagenes', icon: Image },
   { name: 'Video', href: '/arena/video', icon: Video },
   { name: 'Audio', href: '/arena/audio', icon: Music },
@@ -120,15 +111,6 @@ const getArenaColor = (type: ArenaType) => {
   }
 }
 
-// Idiomas disponibles
-const languages = [
-  { code: 'es', name: 'Español' },
-  { code: 'en', name: 'English' },
-  { code: 'pt', name: 'Português' },
-  { code: 'fr', name: 'Français' },
-  { code: 'de', name: 'Deutsch' },
-]
-
 interface SidebarProps {
   isOpen?: boolean
   onClose?: () => void
@@ -163,7 +145,6 @@ export function Sidebar({
   const [showSettings, setShowSettings] = useState(false)
   const [showPricing, setShowPricing] = useState(false)
   const [showSupport, setShowSupport] = useState(false)
-  const [showApps, setShowApps] = useState(false)
   
   // Lógica de colapso combinada
   const [internalCollapsed, setInternalCollapsed] = useState(false)
@@ -495,62 +476,23 @@ export function Sidebar({
               </span>
             </DropdownMenuItem>
             
-            {/* Submenú de idioma */}
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger className="cursor-pointer hover:bg-primary-500/5">
-                <Globe className="h-4 w-4 mr-2" />
-                <span>Idioma</span>
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="w-40 bg-popover/95 backdrop-blur-xl border-primary-500/20">
-                {languages.map((lang) => (
-                  <DropdownMenuItem
-                    key={lang.code}
-                    className="cursor-pointer hover:bg-primary-500/5"
-                  >
-                    {lang.name}
-                    {lang.code === 'es' && (
-                      <span className="ml-auto text-primary-400">✓</span>
-                    )}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-            
             <DropdownMenuItem
               className="cursor-pointer hover:bg-primary-500/5"
               onClick={() => setShowSupport(true)}
             >
               <HelpCircle className="h-4 w-4 mr-2" />
-              <span>Obtener ayuda</span>
+              <span>Ayuda</span>
             </DropdownMenuItem>
             
             <DropdownMenuSeparator className="bg-primary-500/10" />
             
-            {/* Opciones Premium */}
+            {/* Mejorar plan */}
             <DropdownMenuItem
               className="cursor-pointer hover:bg-primary-500/5"
               onClick={() => setShowPricing(true)}
             >
               <ArrowUp className="h-4 w-4 mr-2 text-primary-400" />
               <span className="text-primary-400">Mejorar plan</span>
-            </DropdownMenuItem>
-            
-            <DropdownMenuItem
-              className="cursor-pointer hover:bg-primary-500/5"
-              onClick={() => setShowApps(true)}
-            >
-              <Puzzle className="h-4 w-4 mr-2" />
-              <span>Obtener aplicaciones y extensiones</span>
-            </DropdownMenuItem>
-            
-            <DropdownMenuItem className="cursor-pointer hover:bg-primary-500/5">
-              <Gift className="h-4 w-4 mr-2" />
-              <span>Regalar Aether Premium</span>
-            </DropdownMenuItem>
-            
-            <DropdownMenuItem className="cursor-pointer hover:bg-primary-500/5">
-              <Info className="h-4 w-4 mr-2" />
-              <span>Más información</span>
             </DropdownMenuItem>
             
             <DropdownMenuSeparator className="bg-primary-500/10" />
@@ -605,7 +547,6 @@ export function Sidebar({
       <SettingsModal open={showSettings} onOpenChange={setShowSettings} />
       <PricingModal open={showPricing} onOpenChange={setShowPricing} />
       <SupportCenter open={showSupport} onOpenChange={setShowSupport} />
-      <AppsMarketplace open={showApps} onOpenChange={setShowApps} />
     </aside>
   )
 }
